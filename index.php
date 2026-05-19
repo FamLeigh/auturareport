@@ -1405,7 +1405,7 @@ document.querySelectorAll('.hk-acc-head').forEach(btn => {
   selMake.disabled = true;
 
   try {
-    const res = await fetch('/data/amr-data.json?v=<?= $amr_data_version ?>');
+    const res = await fetch('/data-json?v=<?= $amr_data_version ?>');
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     VEHICLES = decodeRecords(data);
