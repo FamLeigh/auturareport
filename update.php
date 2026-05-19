@@ -17,14 +17,14 @@ if (empty($_SESSION['amr_auth'])) { ?>
 <title>AMR Update</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: #0e0e10; color: #e8e8e0; font-family: system-ui, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
-  .gate { background: #18181b; border: 1px solid #2a2a2e; border-radius: 12px; padding: 40px 36px; width: 100%; max-width: 360px; }
+  body { background: #ffffff; color: #111110; font-family: system-ui, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+  .gate { background: #f6f6f4; border: 1px solid #ddddd8; border-radius: 12px; padding: 40px 36px; width: 100%; max-width: 360px; }
   .gate h1 { font-size: 1.1rem; font-weight: 700; margin-bottom: 6px; }
-  .gate p { font-size: 13px; color: #888; margin-bottom: 24px; }
-  .gate input { width: 100%; background: #0e0e10; border: 1px solid #2a2a2e; border-radius: 8px; color: #e8e8e0; font-size: 15px; padding: 11px 14px; margin-bottom: 12px; }
+  .gate p { font-size: 13px; color: #666; margin-bottom: 24px; }
+  .gate input { width: 100%; background: #ffffff; border: 1px solid #ddddd8; border-radius: 8px; color: #111110; font-size: 15px; padding: 11px 14px; margin-bottom: 12px; }
   .gate input:focus { outline: none; border-color: #f0a500; }
   .gate button { width: 100%; background: #f0a500; border: none; border-radius: 8px; color: #000; font-size: 14px; font-weight: 700; padding: 12px; cursor: pointer; }
-  .gate .err { font-size: 12px; color: #e05a5a; margin-bottom: 10px; }
+  .gate .err { font-size: 12px; color: #c0392b; margin-bottom: 10px; }
 </style>
 </head>
 <body>
@@ -94,6 +94,7 @@ $cur_count = $meta['count']     ?? 0;
 $cur_date  = $meta['data_date'] ?? '';
 $cur_built = $meta['built']     ?? '';
 ?>
+<script>(function(){var t=localStorage.getItem('amr-theme')||'light';if(t==='dark')document.documentElement.setAttribute('data-theme','dark');})();</script>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -101,22 +102,27 @@ $cur_built = $meta['built']     ?? '';
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AMR — Update Data</title>
 <style>
+  :root { --bg:#ffffff;--surface:#f6f6f4;--border:#ddddd8;--text:#111110;--muted:#666;--subtle:#999;--input-bg:#ffffff;--output-bg:#f6f6f4;--output-color:#555; }
+  [data-theme="dark"] { --bg:#0c0c0c;--surface:#18181b;--border:#2a2a2a;--text:#e8e8e0;--muted:#888;--subtle:#666;--input-bg:#0e0e10;--output-bg:#0e0e10;--output-color:#aaa; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: #0e0e10; color: #e8e8e0; font-family: system-ui, sans-serif; padding: 48px 24px; }
+  body { background: var(--bg); color: var(--text); font-family: system-ui, sans-serif; padding: 48px 24px; }
   .wrap { max-width: 640px; margin: 0 auto; }
   h1 { font-size: 1.4rem; font-weight: 700; margin-bottom: 6px; }
-  .back { font-size: 13px; color: #888; text-decoration: none; display: inline-block; margin-bottom: 32px; }
+  .top-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; }
+  .back { font-size: 13px; color: var(--muted); text-decoration: none; }
   .back:hover { color: #f0a500; }
-  .card { background: #18181b; border: 1px solid #2a2a2e; border-radius: 12px; padding: 28px 32px; margin-bottom: 20px; }
-  .card-title { font-size: .8rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #888; margin-bottom: 18px; }
+  .theme-btn { background: none; border: 1px solid var(--border); border-radius: 6px; color: var(--muted); cursor: pointer; width: 32px; height: 32px; font-size: 15px; display: flex; align-items: center; justify-content: center; }
+  .theme-btn:hover { border-color: #f0a500; color: #f0a500; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 28px 32px; margin-bottom: 20px; }
+  .card-title { font-size: .8rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 18px; }
   .meta-row { display: flex; gap: 32px; flex-wrap: wrap; }
-  .meta-item label { display: block; font-size: 10px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: #666; margin-bottom: 5px; }
-  .meta-item span { font-size: 1rem; font-weight: 600; color: #e8e8e0; }
+  .meta-item label { display: block; font-size: 10px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--subtle); margin-bottom: 5px; }
+  .meta-item span { font-size: 1rem; font-weight: 600; color: var(--text); }
   .field { margin-bottom: 16px; }
-  .field label { display: block; font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: #888; margin-bottom: 8px; }
+  .field label { display: block; font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
   .field input[type=text], .field input[type=file] {
-    width: 100%; background: #0e0e10; border: 1px solid #2a2a2e; border-radius: 8px;
-    color: #e8e8e0; font-size: 14px; padding: 10px 14px;
+    width: 100%; background: var(--input-bg); border: 1px solid var(--border); border-radius: 8px;
+    color: var(--text); font-size: 14px; padding: 10px 14px;
   }
   .field input:focus { outline: none; border-color: #f0a500; }
   button[type=submit] {
@@ -126,15 +132,20 @@ $cur_built = $meta['built']     ?? '';
   }
   button[type=submit]:hover { opacity: .85; }
   .notice { padding: 14px 18px; border-radius: 8px; font-size: 13px; margin-bottom: 20px; }
-  .notice.success { background: rgba(94,201,124,.1); border: 1px solid rgba(94,201,124,.3); color: #5ec97c; }
-  .notice.error   { background: rgba(224,90,90,.1);  border: 1px solid rgba(224,90,90,.3);  color: #e05a5a; }
-  .output { background: #0e0e10; border: 1px solid #2a2a2e; border-radius: 8px; padding: 16px; font-family: monospace; font-size: 12px; color: #aaa; white-space: pre-wrap; margin-top: 16px; max-height: 300px; overflow-y: auto; }
-  .note { font-size: 12px; color: #666; margin-top: 12px; line-height: 1.6; }
+  .notice.success { background: rgba(94,201,124,.1); border: 1px solid rgba(94,201,124,.3); color: #3a9e5a; }
+  .notice.error   { background: rgba(224,90,90,.1);  border: 1px solid rgba(224,90,90,.3);  color: #c0392b; }
+  [data-theme="dark"] .notice.success { color: #5ec97c; }
+  [data-theme="dark"] .notice.error   { color: #e05a5a; }
+  .output { background: var(--output-bg); border: 1px solid var(--border); border-radius: 8px; padding: 16px; font-family: monospace; font-size: 12px; color: var(--output-color); white-space: pre-wrap; margin-top: 16px; max-height: 300px; overflow-y: auto; }
+  .note { font-size: 12px; color: var(--subtle); margin-top: 12px; line-height: 1.6; }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <a class="back" href="/">&larr; Back to AMR</a>
+  <div class="top-bar">
+    <a class="back" href="/">&larr; Back to AMR</a>
+    <button class="theme-btn" id="theme-btn" aria-label="Toggle theme">☀</button>
+  </div>
   <h1>Update AMR Data</h1>
 
   <?php if ($result === 'success'): ?>
@@ -184,5 +195,18 @@ $cur_built = $meta['built']     ?? '';
     </p>
   </div>
 </div>
+<script>
+(function(){
+  var btn=document.getElementById("theme-btn");
+  function sync(){var d=document.documentElement.getAttribute("data-theme")==="dark";btn.textContent=d?"☀":"🌙";}
+  sync();
+  btn.addEventListener("click",function(){
+    var d=document.documentElement.getAttribute("data-theme")==="dark";
+    if(d){document.documentElement.removeAttribute("data-theme");localStorage.setItem("amr-theme","light");}
+    else{document.documentElement.setAttribute("data-theme","dark");localStorage.setItem("amr-theme","dark");}
+    sync();
+  });
+})();
+</script>
 </body>
 </html>

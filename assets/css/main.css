@@ -2,16 +2,18 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg:          #0c0c0c;
-  --surface:     #141414;
-  --surface-2:   #1c1c1c;
-  --border:      #2a2a2a;
-  --text:        #f0ede8;
-  --text-muted:  #888;
-  --text-subtle: #555;
+  --bg:          #ffffff;
+  --surface:     #f6f6f4;
+  --surface-2:   #eeeeeb;
+  --border:      #ddddd8;
+  --text:        #111110;
+  --text-muted:  #666;
+  --text-subtle: #999;
   --accent:      #f0a500;
   --accent-dark: #c88800;
-  --accent-glow: rgba(240,165,0,.12);
+  --accent-glow: rgba(240,165,0,.10);
+  --header-bg:   rgba(255,255,255,.95);
+  --shadow-md:   rgba(0,0,0,.10);
 
   --font-body:    'Inter', system-ui, sans-serif;
   --font-display: 'Sora', system-ui, sans-serif;
@@ -24,6 +26,40 @@
   --ease:    cubic-bezier(.4,0,.2,1);
   --trans:   .2s var(--ease);
 }
+
+[data-theme="dark"] {
+  --bg:          #0c0c0c;
+  --surface:     #141414;
+  --surface-2:   #1c1c1c;
+  --border:      #2a2a2a;
+  --text:        #f0ede8;
+  --text-muted:  #888;
+  --text-subtle: #555;
+  --accent-glow: rgba(240,165,0,.12);
+  --header-bg:   rgba(12,12,12,.92);
+  --shadow-md:   rgba(0,0,0,.50);
+}
+
+/* Theme toggle button */
+.theme-toggle {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-muted);
+  cursor: pointer;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color var(--trans), color var(--trans);
+  flex-shrink: 0;
+}
+.theme-toggle:hover { border-color: var(--accent); color: var(--accent); }
+.theme-toggle .icon-sun  { display: none; }
+.theme-toggle .icon-moon { display: block; }
+[data-theme="dark"] .theme-toggle .icon-sun  { display: block; }
+[data-theme="dark"] .theme-toggle .icon-moon { display: none; }
 
 html { scroll-behavior: smooth; }
 
@@ -121,7 +157,7 @@ p { color: var(--text); }
   top: 0; left: 0; right: 0;
   z-index: 100;
   height: var(--nav-h);
-  background: rgba(12,12,12,.92);
+  background: var(--header-bg);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid transparent;
