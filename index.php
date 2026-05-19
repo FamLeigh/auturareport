@@ -1,47 +1,5 @@
 <?php
-session_start();
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['heckle_pass'])) {
-    if ($_POST['heckle_pass'] === 'heckle') {
-        $_SESSION['amr_auth'] = true;
-    }
-}
-
-if (empty($_SESSION['amr_auth'])) { ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Autura Marketplace Report</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: #ffffff; color: #111110; font-family: system-ui, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
-  .gate { background: #f6f6f4; border: 1px solid #ddddd8; border-radius: 12px; padding: 40px 36px; width: 100%; max-width: 360px; }
-  .gate h1 { font-size: 1.1rem; font-weight: 700; margin-bottom: 6px; }
-  .gate p { font-size: 13px; color: #666; margin-bottom: 24px; }
-  .gate input { width: 100%; background: #ffffff; border: 1px solid #ddddd8; border-radius: 8px; color: #111110; font-size: 15px; padding: 11px 14px; margin-bottom: 12px; }
-  .gate input:focus { outline: none; border-color: #f0a500; }
-  .gate button { width: 100%; background: #f0a500; border: none; border-radius: 8px; color: #000; font-size: 14px; font-weight: 700; padding: 12px; cursor: pointer; }
-  .gate .err { font-size: 12px; color: #c0392b; margin-bottom: 10px; }
-</style>
-</head>
-<body>
-<div class="gate">
-  <h1>Autura Marketplace Report</h1>
-  <p>Enter the access password to continue.</p>
-  <?php if ($_SERVER['REQUEST_METHOD'] === 'POST'): ?>
-    <p class="err">Incorrect password.</p>
-  <?php endif; ?>
-  <form method="POST">
-    <input type="password" name="heckle_pass" placeholder="Password" autofocus>
-    <button type="submit">Enter</button>
-  </form>
-</div>
-</body>
-</html>
-<?php exit; }
-
+require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/functions.php';
 
 $page_title = 'Autura Marketplace Report';
