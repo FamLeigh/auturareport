@@ -12,6 +12,8 @@ if (empty($_SESSION['amr_auth'])) { ?>
 <?php exit; }
 
 $ENTRIES = [
+    ['v1.1 Beta', 'May 2026', 'Light/dark theme toggle added to all pages. Defaults to light (white) background. Preference persists across sessions via localStorage with no flash on load.'],
+    ['v1.0 Beta', 'May 2026', 'Moved to standalone site at auturareport.com. Separated from kevinleigh.com, new Autura-branded header and footer, independent deployment pipeline via GitHub and Hostinger.'],
     ['v0.9 Beta', 'May 2026', 'Sidebar layout with accordions. Filters (Vehicle, Condition, Odometer, Documentation, Location) moved to a persistent 260px left sidebar. Results take full remaining width. Filter toggle removed — all options always visible.'],
     ['v0.8 Beta', 'May 2026', 'Model name normalization: 2,029 raw variants collapsed to 1,914 canonical models (spaced-dash variants CR - V → CR-V, truncations GRAND CHER ... → GRAND CHEROKEE, typos SILVRADO → SILVERADO, T&C variants → TOWN & COUNTRY). Multi-select model picker — select multiple models to pool their records (e.g. all BMW 330 variants or all Ford E-series). Sale count in results is now a link to the full raw data table. Trim threshold raised from n≥3 to n≥6 to avoid misleading averages on tiny samples.'],
     ['v0.7 Beta', 'May 2026', 'Data date shown in header. Weekly CSV upload tool added — upload a new CSV at /update to replace the dataset and trigger a rebuild. Changelog page added (this page).'],
@@ -63,7 +65,7 @@ $ENTRIES = [
     <button class="theme-btn" id="theme-btn" aria-label="Toggle theme">🌙</button>
   </div>
   <h1>Heckle Changelog</h1>
-  <p class="sub">Autura Marketplace Report &nbsp;·&nbsp; All 9 versions</p>
+  <p class="sub">Autura Marketplace Report &nbsp;·&nbsp; All 11 versions</p>
   <?php foreach ($ENTRIES as $i => $e): ?>
   <div class="entry">
     <span class="ver"><?= htmlspecialchars($e[0]) ?></span>
