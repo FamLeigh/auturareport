@@ -481,7 +481,7 @@ include __DIR__ . '/includes/header.php';
 <section class="hk-hero container">
   <h1>Autura Marketplace Report <span style="font-size:.55em;font-weight:600;color:var(--accent);letter-spacing:.01em;">(AKA Heckle)</span></h1>
   <p class="lead">
-    Inspired by the ThoughtSpot version from Erin Hankins, Spencer Bauman, and Jason Berman. Valuation estimates drawn from <?= $amr_record_count > 0 ? number_format($amr_record_count) : 'tens of thousands of' ?> sold auction records over the last 18 months, reflecting as-is impound vehicle data from Autura marketplace sales. Beta, for internal evaluation. Created by Kevin B. Leigh. &copy; 2026 Autura NowCo, LLC.
+    Inspired by the ThoughtSpot version from Erin Hankins, Spencer Bauman, and Jason Berman. Valuation estimates drawn from <?= $amr_record_count > 0 ? number_format($amr_record_count) : 'tens of thousands of' ?> sold auction records over the last 18 months, reflecting as-is impound vehicle data from Autura marketplace sales. Beta, for internal evaluation. Created by Kevin B. Leigh. &copy; 2026 Autura NewCo, LLC.
   </p>
   <p style="font-size:13px;color:var(--text-subtle);margin-top:12px;">
     <?php if ($amr_data_date): ?>Dataset: <?= htmlspecialchars($amr_data_date) ?> &nbsp;·&nbsp; <?php endif; ?>
