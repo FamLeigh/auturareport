@@ -441,9 +441,11 @@ function makeImpactSlider({sliderId, pctLblId, noteId, label,
     set(revYrId,  '+' + fmtD(addlRev * 6));
     const n = get(noteId);
     if (n) n.innerHTML =
-      `Moving from <strong>${currentPct.toFixed(1)}%</strong> to <strong>${target}%</strong> ${label} would add ` +
-      `<span class="hi">${fmtD(addlRev)}</span> in buyer premium over 60 days — ` +
-      `<span class="hi">${fmtD(addlRev*6)}</span> projected for the full year.`;
+      `Each improved vehicle adds <span class="hi">${fmtD(prem)}</span> in sale value → ` +
+      `<span class="hi">${fmtD(prem*0.115)}</span> in buyer premium per car. ` +
+      `Moving from <strong>${currentPct.toFixed(1)}%</strong> to <strong>${target}%</strong> (${fmtN(additional)} more vehicles) ` +
+      `would add <span class="hi">${fmtD(addlRev)}</span> over 60 days — ` +
+      `<span class="hi">${fmtD(addlRev*6)}</span> projected annually.`;
   };
 
   slider.addEventListener('input', update);
@@ -592,7 +594,7 @@ function renderPage(V) {
     ${(()=>{
       if(volChgPrior===null) return '';
       const vd=dFmt(volChgPrior), pd=dFmt(priceChgPrior??0), yd=priceChgYoY!==null?dFmt(priceChgYoY):'';
-      return insight(`Volume is ${vd} and avg price is ${pd} vs the prior 60 days.${yd?' Year-over-year, prices are '+yd+'.':''}`);
+      return insight(`Volume is ${vd} and avg price is ${pd} vs the prior 60 days.${yd?` Compared to the <em>same period last year</em> (${mlbl(p3[0])}–${mlbl(p3[1])}), prices are ${yd} — seasonal effects cancel since it\'s the same calendar window.`:''}`);
     })()}
     <div class="mi-g2">
       <div class="mi-card">
@@ -606,7 +608,7 @@ function renderPage(V) {
             <th>Metric</th>
             <th>${mlbl(p1[0])}–${mlbl(p1[1])}</th>
             <th>${mlbl(p2[0])}–${mlbl(p2[1])}</th>
-            <th>YoY ${mlbl(p3[1])}</th>
+            <th>Same Period Last Year<br><span style="font-weight:400;text-transform:none;letter-spacing:0">${mlbl(p3[0])}–${mlbl(p3[1])}</span></th>
           </tr></thead>
           <tbody>
             ${pRow('Volume',   s1?.count, s2?.count, s3?.count, fmtN)}
