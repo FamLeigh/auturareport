@@ -698,6 +698,22 @@ function renderPage(V) {
       </div>
     </div>
 
+    <!-- Condition profile -->
+    <div class="mi-section">
+      <h2>Vehicle Condition Profile</h2>
+      <p>How vehicles arrive at auction — and which combinations leave the most money on the table.</p>
+    </div>
+    <div class="mi-g2">
+      <div class="mi-card" style="overflow-x:auto">
+        <div class="mi-card-title">Condition Mix — Last 60 Days</div>
+        <table class="mi-tbl" id="cond-profile-tbl"></table>
+      </div>
+      <div class="mi-card">
+        <div class="mi-card-title">Problem Combinations</div>
+        <table class="mi-tbl" id="cond-combo-tbl"></table>
+      </div>
+    </div>
+
     <!-- Mileage impact calculator -->
     <div class="mi-section">
       <h2>Mileage Reporting — Revenue Impact</h2>
@@ -774,6 +790,80 @@ function renderPage(V) {
   `;
 
   setupImpactSlider(withOdo.length, r1.length, odoPrem);
+
+  // ── Condition profile tables ───────────────────────────────────────────────
+  const n = r1.length || 1;
+  const p = (x) => (100*x/n).toFixed(1)+'%';
+  const dp = (sub,base) => {
+    if(!sub||!base||!base.avg) return '—';
+    const d = sub.avg-base.avg;
+    return `<span class="${d>=0?'dp':'dn'}">${d>=0?'+':''}${fmtD(d)}</span>`;
+  };
+
+  // individual conditions
+  const cHasKey  = r1.filter(v=>v.has_key);
+  const cNoKey   = r1.filter(v=>v.no_key);
+  const cUnkKey  = r1.filter(v=>!v.has_key&&!v.no_key);
+  const cStarts  = r1.filter(v=>v.starts);
+  const cNoStart = r1.filter(v=>!v.starts);
+  const cHasOdo  = r1.filter(v=>v.odo>0);
+  const cNoOdo   = r1.filter(v=>!v.odo||v.odo<=0);
+
+  const profileRows = [
+    ['Has Key',         cHasKey,  s1],
+    ['No Key',          cNoKey,   s1],
+    ['Key Unknown',     cUnkKey,  s1],
+    ['Starts',          cStarts,  s1],
+    ['Does Not Start',  cNoStart, s1],
+    ['Mileage Known',   cHasOdo,  s1],
+    ['No Mileage',      cNoOdo,   s1],
+  ];
+
+  const profTbl = document.getElementById('cond-profile-tbl');
+  if (profTbl) {
+    profTbl.innerHTML = `
+      <thead><tr>
+        <th>Condition</th><th># Vehicles</th><th>% of Total</th><th>Avg Price</th><th>vs Overall</th>
+      </tr></thead>
+      <tbody>${profileRows.map(([lbl,recs,base])=>{
+        const st=stats(recs);
+        return st ? `<tr>
+          <td>${lbl}</td>
+          <td>${fmtN(st.count)}</td>
+          <td>${p(st.count)}</td>
+          <td>${fmtD(st.avg)}</td>
+          <td>${dp(st,base)}</td>
+        </tr>` : '';
+      }).join('')}</tbody>`;
+  }
+
+  // problem combinations
+  const combos = [
+    ['No Mileage + No Key',             r1.filter(v=>(!v.odo||v.odo<=0)&&v.no_key)],
+    ['No Mileage + Doesn\'t Start',     r1.filter(v=>(!v.odo||v.odo<=0)&&!v.starts)],
+    ['No Key + Doesn\'t Start',         r1.filter(v=>v.no_key&&!v.starts)],
+    ['No Mileage + No Key + No Start',  r1.filter(v=>(!v.odo||v.odo<=0)&&v.no_key&&!v.starts)],
+    ['Has Mileage + Has Key + Starts',  r1.filter(v=>v.odo>0&&v.has_key&&v.starts)],
+  ];
+
+  const comboTbl = document.getElementById('cond-combo-tbl');
+  if (comboTbl) {
+    comboTbl.innerHTML = `
+      <thead><tr>
+        <th>Combination</th><th># Vehicles</th><th>% of Total</th><th>Avg Price</th><th>vs Overall</th>
+      </tr></thead>
+      <tbody>${combos.map(([lbl,recs])=>{
+        const st=stats(recs);
+        const isGood=lbl.startsWith('Has Mileage');
+        return st&&st.count>=3 ? `<tr${isGood?' style="font-weight:600"':''}>
+          <td>${lbl}</td>
+          <td>${fmtN(st.count)}</td>
+          <td>${p(st.count)}</td>
+          <td>${fmtD(st.avg)}</td>
+          <td>${dp(st,s1)}</td>
+        </tr>` : '';
+      }).join('')}</tbody>`;
+  }
 }
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
