@@ -126,6 +126,25 @@ $extra_head = '<meta name="robots" content="noindex, nofollow">
 .iup { color: #2e8a4c; font-weight: 600; } [data-theme="dark"] .iup { color: #5ec97c; }
 .idn { color: #b83232; font-weight: 600; } [data-theme="dark"] .idn { color: #e05a5a; }
 
+/* impact calculator */
+.ic-grid { display: grid; grid-template-columns: 1fr 1.5fr; gap: 28px; align-items: start; }
+@media (max-width: 700px) { .ic-grid { grid-template-columns: 1fr; } }
+.ic-stat { display: flex; align-items: baseline; gap: 10px; margin-bottom: 14px; }
+.ic-big  { font-family: var(--font-display); font-size: 1.6rem; font-weight: 800; color: var(--accent); min-width: 72px; }
+.ic-desc { font-size: 13px; color: var(--text-muted); line-height: 1.4; }
+.ic-slider-label { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: baseline; }
+.ic-slider-label strong { font-size: 1.1rem; color: var(--text); }
+input[type=range].ic-range { width: 100%; accent-color: var(--accent); margin-bottom: 4px; cursor: pointer; }
+.ic-slider-ends { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-bottom: 20px; }
+.ic-boxes { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
+@media (max-width: 500px) { .ic-boxes { grid-template-columns: 1fr; } }
+.ic-box { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 14px 12px; text-align: center; }
+.ic-box-val { font-family: var(--font-display); font-size: 1.25rem; font-weight: 800; color: var(--text); line-height: 1.1; }
+.ic-box-lbl { font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); margin-top: 5px; }
+.ic-box.ic-highlight { background: var(--accent-glow); border-color: rgba(240,165,0,.35); }
+.ic-box.ic-highlight .ic-box-val { font-size: 1.55rem; color: var(--accent); }
+.ic-divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+
 /* print button */
 .mi-print-btn {
   background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px;
@@ -394,6 +413,39 @@ function kpiCard(title,value,sub,s1,s2,key){
   return `<div class="mi-card"><div class="mi-card-title">${title}</div><div class="kpi-val">${value}</div><div class="kpi-lbl">${sub}</div>${dh}</div>`;
 }
 
+// ── Impact slider ─────────────────────────────────────────────────────────────
+function setupImpactSlider(currentWithOdo, total, prem) {
+  const slider = document.getElementById('odo-slider');
+  const boxAdd = document.getElementById('ic-add-vehicles');
+  const boxVal = document.getElementById('ic-add-value');
+  const boxRev = document.getElementById('ic-add-revenue');
+  const lbl    = document.getElementById('ic-target-pct');
+  const iNote  = document.getElementById('ic-note');
+  if (!slider||!boxRev) return;
+
+  const currentPct = total ? (100*currentWithOdo/total) : 0;
+
+  const update = () => {
+    const target    = +slider.value;
+    const targetCnt = Math.round((target/100)*total);
+    const additional= Math.max(0, targetCnt - currentWithOdo);
+    const addlVal   = additional * prem;
+    const addlRev   = addlVal * 0.115;
+
+    if (lbl)    lbl.textContent    = target + '%';
+    if (boxAdd) boxAdd.textContent = '+' + fmtN(additional);
+    if (boxVal) boxVal.textContent = '+' + fmtD(addlVal);
+    if (boxRev) boxRev.textContent = '+' + fmtD(addlRev);
+    if (iNote)  iNote.innerHTML    =
+      `Moving from <strong>${currentPct.toFixed(1)}%</strong> to <strong>${target}%</strong> mileage reporting would have added ` +
+      `<span class="hi">${fmtD(addlRev)}</span> in buyer premium revenue in just the last 60 days — ` +
+      `<span class="hi">${fmtD(addlRev*6)}</span> annualised at this run rate.`;
+  };
+
+  slider.addEventListener('input', update);
+  update();
+}
+
 // ── Insight helper ────────────────────────────────────────────────────────────
 const _bulb = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
 const insight = text => `<div class="mi-insight">${_bulb}<span>${text}</span></div>`;
@@ -646,6 +698,67 @@ function renderPage(V) {
       </div>
     </div>
 
+    <!-- Mileage impact calculator -->
+    <div class="mi-section">
+      <h2>Mileage Reporting — Revenue Impact</h2>
+      <p>What would have happened to buyer premium revenue if more vehicles had a confirmed odometer reading?</p>
+    </div>
+    <div class="mi-card" style="margin-bottom:16px">
+      <div class="ic-grid">
+
+        <!-- Left: current state -->
+        <div>
+          <div class="mi-card-title">Current State (Last 60 Days)</div>
+          <div class="ic-stat">
+            <span class="ic-big">${(r1.length?(100*withOdo.length/r1.length):0).toFixed(1)}%</span>
+            <span class="ic-desc">of vehicles have a confirmed odometer reading<br>(${fmtN(withOdo.length)} of ${fmtN(r1.length)})</span>
+          </div>
+          <div class="ic-stat">
+            <span class="ic-big">${fmtD(odoPrem)}</span>
+            <span class="ic-desc">avg sale premium when mileage is known vs unknown</span>
+          </div>
+          <div class="ic-stat">
+            <span class="ic-big">11.5%</span>
+            <span class="ic-desc">buyer premium rate you earn on the sale price</span>
+          </div>
+        </div>
+
+        <!-- Right: scenario slider -->
+        <div>
+          <div class="mi-card-title">Scenario Calculator</div>
+          <div class="ic-slider-label">
+            Target mileage reporting rate &nbsp;
+            <strong id="ic-target-pct">50%</strong>
+          </div>
+          <input type="range" id="odo-slider" class="ic-range"
+            min="${Math.max(1,Math.ceil(r1.length?100*withOdo.length/r1.length:0))}"
+            max="100" value="50" step="1">
+          <div class="ic-slider-ends">
+            <span>Current: ${(r1.length?(100*withOdo.length/r1.length):0).toFixed(1)}%</span>
+            <span>100%</span>
+          </div>
+
+          <div class="ic-boxes">
+            <div class="ic-box">
+              <div class="ic-box-val" id="ic-add-vehicles">—</div>
+              <div class="ic-box-lbl">Additional vehicles<br>with mileage</div>
+            </div>
+            <div class="ic-box">
+              <div class="ic-box-val" id="ic-add-value">—</div>
+              <div class="ic-box-lbl">Additional sale<br>value generated</div>
+            </div>
+            <div class="ic-box ic-highlight">
+              <div class="ic-box-val" id="ic-add-revenue">—</div>
+              <div class="ic-box-lbl">Your additional<br>buyer premium</div>
+            </div>
+          </div>
+
+          <hr class="ic-divider">
+          <div class="mi-insight" style="margin-top:0" id="ic-note"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- 12-month trend -->
     <div class="mi-section">
       <h2>12-Month Trend</h2>
@@ -659,6 +772,8 @@ function renderPage(V) {
       <div class="mi-chart">${trend}</div>
     </div>
   `;
+
+  setupImpactSlider(withOdo.length, r1.length, odoPrem);
 }
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
