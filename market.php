@@ -2,10 +2,10 @@
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/functions.php';
 
-$page_title = 'Market Insights';
-$meta_desc  = 'Autura marketplace pricing trends — volume, avg price, regional breakdown, and 60-day comparisons.';
+$page_title = 'Autura Market Report';
+$meta_desc  = 'Autura Market Report — marketplace pricing trends, volume, regional breakdown, and 60-day comparisons.';
 $body_class = 'page-market';
-$canonical  = '/market';
+$canonical  = '/autura-market-report';
 $amr_data_version = file_exists(__DIR__ . '/data/amr-data.json') ? filemtime(__DIR__ . '/data/amr-data.json') : 0;
 
 $extra_head = '<meta name="robots" content="noindex, nofollow">
@@ -110,9 +110,42 @@ $extra_head = '<meta name="robots" content="noindex, nofollow">
 .leg-bar  { display: inline-block; width: 12px; height: 8px; background: var(--accent); opacity: .75; border-radius: 2px; }
 .leg-line { display: inline-block; width: 18px; height: 2px; background: var(--accent); }
 
+/* print button */
+.mi-print-btn {
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text-muted); font-size: 13px; font-weight: 600; padding: 8px 16px;
+  cursor: pointer; display: inline-flex; align-items: center; gap: 7px;
+  transition: border-color .15s, color .15s;
+}
+.mi-print-btn:hover { border-color: var(--accent); color: var(--accent); }
+.mi-print-footer { display: none; }
+
 /* loading */
 .mi-load { text-align: center; padding: 80px 24px; color: var(--text-muted); }
 @keyframes mi-spin { to { transform: rotate(360deg); } }
+
+/* ── Print ────────────────────────────────────────────────────────── */
+@media print {
+  @page { margin: 18mm 14mm; }
+  .site-header, .mi-print-btn, .site-footer { display: none !important; }
+  body { background: #fff !important; color: #111 !important; font-size: 11pt; }
+  .mi-hero { padding: 0 0 16px; }
+  .mi-card { border: 1px solid #ddd !important; background: #fff !important; break-inside: avoid; margin-bottom: 12pt; }
+  .mi-card-title { color: #555 !important; }
+  .mi-g3,.mi-g2,.mi-g21 { display: grid !important; gap: 10pt; }
+  .mi-lbl,.mi-lbl-val { fill: #333 !important; }
+  .mi-axis,.mi-grid-l  { stroke: #ccc !important; }
+  .mi-bar-fill { fill: #f0a500 !important; opacity: .85 !important; }
+  .mi-line { stroke: #f0a500 !important; }
+  .mi-dot  { fill: #fff !important; stroke: #f0a500 !important; }
+  .donut-swatch { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  .doc-fill { background: #f0a500 !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  .kpi-val { font-size: 22pt; }
+  .dp { color: #1a6e35 !important; } .dn { color: #a0201a !important; }
+  .mi-section { margin: 14pt 0 8pt; }
+  .mi-print-footer { display: block !important; text-align: center; font-size: 9pt; color: #777; border-top: 1px solid #ddd; padding-top: 8pt; margin-top: 20pt; }
+  svg { max-width: 100% !important; }
+}
 </style>';
 
 include __DIR__ . '/includes/header.php';
@@ -121,10 +154,18 @@ include __DIR__ . '/includes/header.php';
 <div class="container">
   <section class="mi-hero">
     <p style="font-size:12px;margin-bottom:10px;">
-      <a href="/" style="color:var(--text-muted);text-decoration:none;">&larr; Marketplace Report</a>
+      <a href="/" style="color:var(--text-muted);text-decoration:none;">&larr; Valuation Tool</a>
     </p>
-    <h1>Market Insights</h1>
-    <p class="mi-period" id="mi-period">Loading…</p>
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <div>
+        <h1>Autura Market Report</h1>
+        <p class="mi-period" id="mi-period">Loading…</p>
+      </div>
+      <button class="mi-print-btn" onclick="window.print()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        Print / Save PDF
+      </button>
+    </div>
   </section>
   <div id="mi-body">
     <div class="mi-load">
@@ -540,5 +581,9 @@ function renderPage(V) {
   }
 })();
 </script>
+
+<div class="mi-print-footer container">
+  &copy; <?= date('Y') ?> Autura NewCo, LLC. &nbsp;&middot;&nbsp; <a href="https://autura.com" style="color:inherit">autura.com</a> &nbsp;&middot;&nbsp; Autura Market Report &nbsp;&middot;&nbsp; Confidential — Internal Use Only
+</div>
 
 <?php include __DIR__ . '/includes/footer.php'; ?>

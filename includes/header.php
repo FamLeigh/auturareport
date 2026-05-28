@@ -32,7 +32,7 @@
     <div style="display:flex;align-items:center;gap:14px;">
       <nav style="display:flex;gap:4px;">
         <a href="/" style="font-size:13px;font-weight:500;color:var(--text-muted);text-decoration:none;padding:6px 10px;border-radius:6px;transition:color .15s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Valuation</a>
-        <a href="/market" style="font-size:13px;font-weight:500;color:var(--text-muted);text-decoration:none;padding:6px 10px;border-radius:6px;transition:color .15s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Market Insights</a>
+        <a href="/autura-market-report" style="font-size:13px;font-weight:500;color:var(--text-muted);text-decoration:none;padding:6px 10px;border-radius:6px;transition:color .15s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Market Report</a>
       </nav>
       <span style="font-size:11px;font-weight:600;background:var(--accent-glow);color:var(--accent);border:1px solid rgba(240,165,0,.3);border-radius:4px;padding:2px 8px;letter-spacing:.04em;">BETA</span>
       <button class="theme-toggle" id="theme-toggle" aria-label="Toggle light/dark mode">
