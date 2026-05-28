@@ -7,6 +7,9 @@ $meta_desc  = 'Autura Market Report — marketplace pricing trends, volume, regi
 $body_class = 'page-market';
 $canonical  = '/autura-market-report';
 $amr_data_version = file_exists(__DIR__ . '/data/amr-data.json') ? filemtime(__DIR__ . '/data/amr-data.json') : 0;
+$amr_meta         = file_exists(__DIR__ . '/data/amr-meta.json') ? json_decode(file_get_contents(__DIR__ . '/data/amr-meta.json'), true) : [];
+$amr_data_date    = $amr_meta['data_date'] ?? '';
+$amr_record_count = (int)($amr_meta['count'] ?? 0);
 
 $extra_head = '<meta name="robots" content="noindex, nofollow">
 <style>
@@ -192,6 +195,8 @@ include __DIR__ . '/includes/header.php';
 </div>
 
 <script>
+const AMR_DATA_DATE  = '<?= h($amr_data_date) ?>';
+const AMR_RECORD_CNT = <?= $amr_record_count ?>;
 const $    = id => document.getElementById(id);
 const fmtD = n  => '$' + Math.round(n).toLocaleString();
 const fmtN = n  => Math.round(n).toLocaleString();
@@ -406,7 +411,9 @@ function renderPage(V) {
   const r1=V.filter(v=>inP(v,p1)), r2=V.filter(v=>inP(v,p2)), r3=V.filter(v=>inP(v,p3));
   const s1=stats(r1), s2=stats(r2), s3=stats(r3);
 
-  $('mi-period').textContent=`${mlbl(p1[0])} – ${mlbl(p1[1])}  ·  ${fmtN(V.length)} total records`;
+  $('mi-period').innerHTML =
+    (AMR_DATA_DATE ? `Dataset: <strong>${AMR_DATA_DATE}</strong> &nbsp;&middot;&nbsp; ` : '') +
+    `Showing ${mlbl(p1[0])} – ${mlbl(p1[1])} &nbsp;&middot;&nbsp; ${fmtN(V.length)} total records`;
 
   const group=(recs,key)=>{const m={};recs.forEach(v=>{const k=v[key]||'Unknown';if(!m[k])m[k]=[];m[k].push(v);});return m;};
 
@@ -420,20 +427,21 @@ function renderPage(V) {
 
   const donutItems=typeStats.map((x,i)=>({label:x.t,val:x.st1.count,color:CHART_COLORS[i]}));
   const donut=donutSVG(donutItems,160);
-  const donutLegend=donutItems.map((d,i)=>
-    `<div class="donut-key"><div class="donut-swatch" style="background:${d.color}"></div><span style="flex:1">${d.label}</span><span style="font-weight:600;font-size:12px">${fmtN(d.val)}</span><span style="color:var(--text-muted);font-size:12px;margin-left:8px">${fmtD(typeStats[i].st1.avg)}</span></div>`
-  ).join('');
+  const donutLegend=donutItems.map((d,i)=>{
+    const p=s1?.count?(100*d.val/s1.count).toFixed(1):'0';
+    return `<div class="donut-key"><div class="donut-swatch" style="background:${d.color}"></div><span style="flex:1">${d.label}</span><span style="color:var(--text-muted);font-size:12px;min-width:38px;text-align:right">${p}%</span><span style="font-weight:600;font-size:12px;margin-left:10px;min-width:46px;text-align:right">${fmtN(d.val)}</span><span style="color:var(--text-muted);font-size:12px;margin-left:10px">${fmtD(typeStats[i].st1.avg)}</span></div>`;
+  }).join('');
 
   // ── Regions ────────────────────────────────────────────────────────────────
   const rg1=group(r1,'region'), rg2=group(r2,'region');
   const regionData=Object.entries(rg1)
-    .map(([k,recs])=>({label:rl(k),val:recs.length,sub:fmtD(stats(recs)?.avg??0),st2:stats(rg2[k]||[])}))
+    .map(([k,recs])=>{const p=s1?.count?(100*recs.length/s1.count).toFixed(1):'0';return{label:rl(k),val:recs.length,sub:`${p}% · ${fmtD(stats(recs)?.avg??0)}`,st2:stats(rg2[k]||[])};})
     .sort((a,b)=>b.val-a.val).slice(0,12);
 
   // ── Makes ──────────────────────────────────────────────────────────────────
   const mg1=group(r1,'make'), mg2=group(r2,'make');
   const makeData=Object.entries(mg1)
-    .map(([k,recs])=>({label:cap(k),val:recs.length,sub:fmtD(stats(recs)?.avg??0),st2:stats(mg2[k]||[])}))
+    .map(([k,recs])=>{const p=s1?.count?(100*recs.length/s1.count).toFixed(1):'0';return{label:cap(k),val:recs.length,sub:`${p}% · ${fmtD(stats(recs)?.avg??0)}`,st2:stats(mg2[k]||[])};})
     .sort((a,b)=>b.val-a.val).slice(0,15);
 
   // ── Period grouped bar chart ───────────────────────────────────────────────
@@ -579,16 +587,16 @@ function renderPage(V) {
     </div>
     <div class="mi-g2">
       <div class="mi-card">
-        <div class="mi-card-title">Top 15 Makes &nbsp;<span style="float:right;font-weight:400">Avg $</span></div>
-        <div class="mi-chart">${hBarSVG(makeData,{W:480,rowH:28,padL:100,padR:72})}</div>
+        <div class="mi-card-title">Top 15 Makes &nbsp;<span style="float:right;font-weight:400">% vol &nbsp;·&nbsp; Avg $</span></div>
+        <div class="mi-chart">${hBarSVG(makeData,{W:480,rowH:28,padL:100,padR:108})}</div>
         ${(()=>{
           if(!makeData[0]||!makeData[1]) return '';
           return insight(`<span class="hi">${makeData[0].label}</span> and <span class="hi">${makeData[1].label}</span> account for <span class="hi">${top2pct.toFixed(0)}%</span> of volume — the highest-liquidity makes for quick resale. ${makeData[0].label} leads both volume and avg price among top makes.`);
         })()}
       </div>
       <div class="mi-card">
-        <div class="mi-card-title">By Region &nbsp;<span style="float:right;font-weight:400">Avg $</span></div>
-        <div class="mi-chart">${hBarSVG(regionData,{W:480,rowH:28,padL:100,padR:72})}</div>
+        <div class="mi-card-title">By Region &nbsp;<span style="float:right;font-weight:400">% vol &nbsp;·&nbsp; Avg $</span></div>
+        <div class="mi-chart">${hBarSVG(regionData,{W:480,rowH:28,padL:100,padR:108})}</div>
         ${(()=>{
           if(!topReg||!botReg||topReg.r===botReg.r) return '';
           const spread=topReg.st.avg-botReg.st.avg;
@@ -615,11 +623,13 @@ function renderPage(V) {
             <div class="cond-lbl">Key Present vs No Key</div>
             <div class="cond-val">${kPrem!=null?(kPrem>=0?'+':'')+fmtD(kPrem):'—'}</div>
             <div class="cond-sub">${sKey?fmtD(sKey.avg):'-'} vs ${sNoKey?fmtD(sNoKey.avg):'-'}</div>
+            <div class="cond-sub" style="margin-top:4px">${sKey&&r1.length?pct1(sKey.count,r1.length)+' have key':''}${sNoKey&&r1.length?' · '+pct1(sNoKey.count,r1.length)+' no key':''}</div>
           </div>
           <div class="cond-item">
             <div class="cond-lbl">Starts vs Doesn't</div>
             <div class="cond-val">${sPrem!=null?(sPrem>=0?'+':'')+fmtD(sPrem):'—'}</div>
             <div class="cond-sub">${sSt?fmtD(sSt.avg):'-'} vs ${sNoSt?fmtD(sNoSt.avg):'-'}</div>
+            <div class="cond-sub" style="margin-top:4px">${sSt&&r1.length?pct1(sSt.count,r1.length)+' start':''}${sNoSt&&r1.length?' · '+pct1(sNoSt.count,r1.length)+' don\'t':''}</div>
           </div>
         </div>
         ${(()=>{
