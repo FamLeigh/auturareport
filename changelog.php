@@ -2,17 +2,24 @@
 require_once __DIR__ . '/includes/auth.php';
 
 $ENTRIES = [
-    ['v1.1 Beta', 'May 2026', 'Light/dark theme toggle added to all pages. Defaults to light (white) background. Preference persists across sessions via localStorage with no flash on load.'],
-    ['v1.0 Beta', 'May 2026', 'Moved to standalone site at auturareport.com. Separated from kevinleigh.com, new Autura-branded header and footer, independent deployment pipeline via GitHub and Hostinger.'],
-    ['v0.9 Beta', 'May 2026', 'Sidebar layout with accordions. Filters (Vehicle, Condition, Odometer, Documentation, Location) moved to a persistent 260px left sidebar. Results take full remaining width. Filter toggle removed — all options always visible.'],
-    ['v0.8 Beta', 'May 2026', 'Model name normalization: 2,029 raw variants collapsed to 1,914 canonical models (spaced-dash variants CR - V → CR-V, truncations GRAND CHER ... → GRAND CHEROKEE, typos SILVRADO → SILVERADO, T&C variants → TOWN & COUNTRY). Multi-select model picker — select multiple models to pool their records (e.g. all BMW 330 variants or all Ford E-series). Sale count in results is now a link to the full raw data table. Trim threshold raised from n≥3 to n≥6 to avoid misleading averages on tiny samples.'],
-    ['v0.7 Beta', 'May 2026', 'Data date shown in header. Weekly CSV upload tool added — upload a new CSV at /update to replace the dataset and trigger a rebuild. Changelog page added (this page).'],
-    ['v0.6 Beta', 'May 2026', 'Make name normalization: ~95 raw CSV variants collapsed to 183 canonical makes (e.g. CHEVY/CHEVR/CHEVROT → CHEVROLET, 6 Chrysler variants → CHRYSLER). Full 18-month production dataset loaded (83,074 records). Test data removed.'],
-    ['v0.5 Beta', 'May 2026', 'Password protection added. Session-based gate on / and /update.'],
-    ['v0.4 Beta', 'May 2026', 'Complete data pipeline overhaul. CSVs now processed offline by build-amr-data.php into a compact dictionary-compressed JSON (2.25 MB). Page no longer inlines all records — fetches JSON async on load. Supports datasets of 80,000+ rows without page slowdown.'],
-    ['v0.3 Beta', 'May 2026', 'Renamed from AMMR to Autura Marketplace Report (AMR). Internal codename established: Heckle. Clean URL updated to / .'],
-    ['v0.2 Beta', 'May 2026', 'Filter UX improvement: key, condition, odometer, documentation, and region filters collapsed behind a toggle button. Active filter chips show current selections in the filter bar.'],
-    ['v0.1 Beta', 'May 2026', 'Initial launch. Features: make/model/year selectors, VIN decoder (NHTSA API), price stats (range, average, trimmed average, median), recommended reserve (trimmed avg − 10%), condition score dots, 18-month price trend chart, regional breakdown table, condition signals (key premium, starts premium).'],
+    ['v1.8 Beta', 'May 28, 2026', 'Revenue Impact Calculators. Two interactive sliders: (1) Mileage Reporting — drag target % to see additional vehicles, added sale value, and buyer premium gain for last 60 days plus full-year projection. (2) Has Key + Starts — same model for the combined condition premium. Both sliders compute live from the actual dataset.'],
+    ['v1.7 Beta', 'May 28, 2026', 'Vehicle Condition Profile section added to Autura Market Report. Condition Mix table: has key / no key / key unknown / starts / no start / mileage known / no mileage, each with count, % of total, avg price, and delta vs overall. Problem Combinations table: No Mileage + No Key, No Mileage + No Start, No Key + No Start, and the triple — No Mileage + No Key + No Start. Best-case baseline (key + starts + mileage) shown for comparison.'],
+    ['v1.6 Beta', 'May 28, 2026', 'Data-driven insights added throughout Autura Market Report. Six callout panels computed from live data: period trend (vol/price vs prior and YoY), vehicle type premium, top-make liquidity share, regional price spread, odometer/jump-box ROI, and combined key+starts premium. Odometer bands now show % of total alongside avg price.'],
+    ['v1.5 Beta', 'May 28, 2026', 'Percentages added throughout the report: vehicle type donut legend (% of 60d volume), top makes and regions (% vol · avg $), condition cards (% with key / % that start). Dataset date from amr-meta.json displayed in the report hero. Print support added — Print / Save PDF button with @media print CSS; print footer shows copyright and autura.com.'],
+    ['v1.4 Beta', 'May 28, 2026', 'Charts added to Autura Market Report: donut chart for vehicle type mix, grouped bar chart for 60-day period comparison (volume / avg price / median), horizontal bar charts for top 15 makes and top 12 regions (volume with % and avg price). Enhanced 12-month trend: volume bars + avg price line with gridlines.'],
+    ['v1.3 Beta', 'May 28, 2026', 'Autura Market Report launched at /autura-market-report. Manheim-style analytics page: 3 KPI cards with 60-day deltas, period comparison table (last 60d / prior 60d / year-ago 60d), vehicle type breakdown, regional table, top 15 makes, price by odometer band, condition premiums (key / starts), documentation mix, and 12-month trend chart. All computed client-side from the existing dataset.'],
+    ['v1.2 Beta', 'May 19, 2026', 'Login now requires an @autura.com email address plus the access password. Non-Autura emails are rejected with a specific error. Each successful login is recorded (email, IP, timestamp) to data/access-log.json. Access log viewable at /access-log (auth-gated). Auth logic centralized in includes/auth.php; duplicate gate HTML removed from all three pages.'],
+    ['v1.1 Beta', 'May 19, 2026', 'Light/dark theme toggle added to all pages. Defaults to light (white) background. Preference persists across sessions via localStorage with no flash on load. Toggle button in nav: moon to go dark, sun to return to light.'],
+    ['v1.0 Beta', 'May 19, 2026', 'Moved to standalone site at auturareport.com. Separated from kevinleigh.com, new Autura-branded header and footer, clean URL routing, independent GitHub repo (FamLeigh/auturareport) and Hostinger deployment pipeline.'],
+    ['v0.9 Beta', 'May 19, 2026', 'Sidebar layout with accordions. Filters (Vehicle, Condition, Odometer, Documentation, Location) moved to a persistent 260px left sidebar. Results take full remaining width. Filter toggle removed — all options always visible.'],
+    ['v0.8 Beta', 'May 19, 2026', 'Model name normalization: 2,029 raw variants collapsed to 1,914 canonical models (spaced-dash variants CR - V → CR-V, truncations GRAND CHER ... → GRAND CHEROKEE, typos SILVRADO → SILVERADO, T&C variants → TOWN & COUNTRY). Multi-select model picker. Sale count in results links to full raw data table. Trim threshold raised from n≥3 to n≥6.'],
+    ['v0.7 Beta', 'May 19, 2026', 'Dataset date shown in header. CSV upload tool added at /update — upload a new CSV to replace the dataset and trigger an automated rebuild. Changelog page added.'],
+    ['v0.6 Beta', 'May 19, 2026', 'Make name normalization: ~95 raw CSV variants collapsed to 183 canonical makes (e.g. CHEVY/CHEVR/CHEVROT → CHEVROLET, 6 Chrysler variants → CHRYSLER). Full 18-month production dataset loaded (83,074 records). Test data removed.'],
+    ['v0.5 Beta', 'May 19, 2026', 'Password protection added. Session-based gate on / and /update. Login required to view any part of the tool.'],
+    ['v0.4 Beta', 'May 19, 2026', 'Complete data pipeline overhaul. CSVs processed offline by build-amr-data.php into a compact dictionary-compressed JSON (2.25 MB). Page no longer inlines all records — fetches JSON async on load. Supports 80,000+ rows without page slowdown.'],
+    ['v0.3 Beta', 'May 19, 2026', 'Renamed from AMMR to Autura Marketplace Report (AMR). Internal codename: Heckle. Inspired by the ThoughtSpot version from Erin Hankins, Spencer Bauman, and Jason Berman.'],
+    ['v0.2 Beta', 'May 19, 2026', 'Filter UX improvement: key, condition, odometer, documentation, and region filters collapsed behind a toggle button. Active filter chips show current selections.'],
+    ['v0.1 Beta', 'May 19, 2026', 'Initial launch. Features: make/model/year selectors, VIN decoder (NHTSA API), price stats (range, average, trimmed average, median), recommended reserve (trimmed avg − 10%), condition score dots, 18-month price trend chart, regional breakdown table, condition signals (key premium, starts premium).'],
 ];
 ?>
 <script>(function(){var t=localStorage.getItem('amr-theme')||'light';if(t==='dark')document.documentElement.setAttribute('data-theme','dark');})();</script>
@@ -36,7 +43,7 @@ $ENTRIES = [
   .theme-btn:hover { border-color: #f0a500; color: #f0a500; }
   h1 { font-size: 1.4rem; font-weight: 700; margin-bottom: 6px; }
   .sub { font-size: 13px; color: var(--subtle); margin-bottom: 36px; }
-  .entry { border-bottom: 1px solid var(--border); padding: 20px 0; display: grid; grid-template-columns: 100px 90px 1fr; gap: 0 20px; align-items: baseline; }
+  .entry { border-bottom: 1px solid var(--border); padding: 20px 0; display: grid; grid-template-columns: 100px 110px 1fr; gap: 0 20px; align-items: baseline; }
   .entry:last-child { border-bottom: none; }
   .ver { font-size: 13px; font-weight: 700; color: #f0a500; white-space: nowrap; }
   .entry:not(:first-child) .ver { color: var(--ver-old); }
@@ -54,8 +61,8 @@ $ENTRIES = [
     <a class="back" href="/">&larr; Back to AMR</a>
     <button class="theme-btn" id="theme-btn" aria-label="Toggle theme">🌙</button>
   </div>
-  <h1>Heckle Changelog</h1>
-  <p class="sub">Autura Marketplace Report &nbsp;·&nbsp; All 11 versions</p>
+  <h1>AMR Changelog</h1>
+  <p class="sub">Autura Marketplace Report &nbsp;·&nbsp; All <?= count($ENTRIES) ?> versions</p>
   <?php foreach ($ENTRIES as $i => $e): ?>
   <div class="entry">
     <span class="ver"><?= htmlspecialchars($e[0]) ?></span>

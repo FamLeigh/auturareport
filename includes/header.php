@@ -30,9 +30,20 @@
       <span style="font-size:.95rem;font-weight:700;color:var(--text);letter-spacing:-.01em;">Autura Marketplace Report</span>
     </a>
     <div style="display:flex;align-items:center;gap:14px;">
-      <nav style="display:flex;gap:4px;">
-        <a href="/" style="font-size:13px;font-weight:500;color:var(--text-muted);text-decoration:none;padding:6px 10px;border-radius:6px;transition:color .15s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Valuation</a>
-        <a href="/autura-market-report" style="font-size:13px;font-weight:500;color:var(--text-muted);text-decoration:none;padding:6px 10px;border-radius:6px;transition:color .15s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Market Report</a>
+      <nav style="display:flex;gap:2px;flex-wrap:wrap;" id="site-nav">
+        <?php
+          $nav_links = [
+            '/'                    => 'Valuation',
+            '/autura-market-report'=> 'Market Report',
+            '/changelog'           => 'Changelog',
+            '/update'              => 'Update Data',
+          ];
+          $current_path = strtok($_SERVER['REQUEST_URI'], '?');
+          foreach ($nav_links as $href => $label):
+            $is_active = ($current_path === $href);
+        ?>
+        <a href="<?= $href ?>" style="font-size:13px;font-weight:<?= $is_active ? '700' : '500' ?>;color:<?= $is_active ? 'var(--text)' : 'var(--text-muted)' ?>;text-decoration:none;padding:6px 10px;border-radius:6px;transition:color .15s;white-space:nowrap;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='<?= $is_active ? 'var(--text)' : 'var(--text-muted)' ?>'"><?= $label ?></a>
+        <?php endforeach; ?>
       </nav>
       <span style="font-size:11px;font-weight:600;background:var(--accent-glow);color:var(--accent);border:1px solid rgba(240,165,0,.3);border-radius:4px;padding:2px 8px;letter-spacing:.04em;">BETA</span>
       <button class="theme-toggle" id="theme-toggle" aria-label="Toggle light/dark mode">
