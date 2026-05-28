@@ -110,6 +110,19 @@ $extra_head = '<meta name="robots" content="noindex, nofollow">
 .leg-bar  { display: inline-block; width: 12px; height: 8px; background: var(--accent); opacity: .75; border-radius: 2px; }
 .leg-line { display: inline-block; width: 18px; height: 2px; background: var(--accent); }
 
+/* insights */
+.mi-insight {
+  display: flex; gap: 10px; align-items: flex-start;
+  background: rgba(240,165,0,.07); border-left: 3px solid var(--accent);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  padding: 12px 16px; margin-top: 14px;
+  font-size: 13px; line-height: 1.6; color: var(--text-muted);
+}
+.mi-insight svg { flex-shrink: 0; color: var(--accent); margin-top: 1px; }
+.hi  { color: var(--accent); font-weight: 700; }
+.iup { color: #2e8a4c; font-weight: 600; } [data-theme="dark"] .iup { color: #5ec97c; }
+.idn { color: #b83232; font-weight: 600; } [data-theme="dark"] .idn { color: #e05a5a; }
+
 /* print button */
 .mi-print-btn {
   background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px;
@@ -376,6 +389,14 @@ function kpiCard(title,value,sub,s1,s2,key){
   return `<div class="mi-card"><div class="mi-card-title">${title}</div><div class="kpi-val">${value}</div><div class="kpi-lbl">${sub}</div>${dh}</div>`;
 }
 
+// ── Insight helper ────────────────────────────────────────────────────────────
+const _bulb = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
+const insight = text => `<div class="mi-insight">${_bulb}<span>${text}</span></div>`;
+const pct1 = (n,d) => d ? (100*n/d).toFixed(1)+'%' : '—';
+const dFmt = (d,pos='<span class="iup">',neg='<span class="idn">') =>
+  d > 0.05 ? `${pos}▲${Math.abs(d).toFixed(1)}%</span>` :
+  d < -0.05 ? `${neg}▼${Math.abs(d).toFixed(1)}%</span>` : '<span>±0%</span>';
+
 // ── Main render ────────────────────────────────────────────────────────────────
 function renderPage(V) {
   const allM=[...new Set(V.filter(v=>v.month).map(v=>v.month))].sort();
@@ -428,11 +449,19 @@ function renderPage(V) {
   ]});
 
   // ── Odometer ───────────────────────────────────────────────────────────────
+  const withOdo=r1.filter(v=>v.odo>0), noOdo=r1.filter(v=>!v.odo||v.odo<=0);
+  const stWithOdo=stats(withOdo), stNoOdo=stats(noOdo);
+  const noOdoPct=(r1.length?(100*noOdo.length/r1.length):0);
+  const odoPrem=(stWithOdo&&stNoOdo)?stWithOdo.avg-stNoOdo.avg:0;
+  const odoPremPct=(stNoOdo&&stNoOdo.avg)?(odoPrem/stNoOdo.avg*100):0;
+
   const bands=[['Under 25K',0,25000],['25K–50K',25000,50000],['50K–75K',50000,75000],['75K–100K',75000,100000],['100K–150K',100000,150000],['150K+',150000,Infinity],['No Reading',-1,-1]];
   const odoData=bands.map(([lbl,lo,hi])=>{
     const recs=lo===-1?r1.filter(v=>!v.odo||v.odo<=0):r1.filter(v=>v.odo>0&&v.odo>=lo&&v.odo<hi);
     const st=stats(recs);
-    return st&&st.count>=5?{label:lbl,val:st.count,sub:fmtD(st.avg)}:null;
+    if(!st||st.count<5) return null;
+    const p=(r1.length?(100*recs.length/r1.length):0).toFixed(1);
+    return {label:lbl, val:st.count, sub:`${p}% · ${fmtD(st.avg)}`};
   }).filter(Boolean);
 
   // ── Condition premiums ─────────────────────────────────────────────────────
@@ -440,6 +469,9 @@ function renderPage(V) {
   const sSt=stats(r1.filter(v=>v.starts)),   sNoSt=stats(r1.filter(v=>!v.starts&&(v.has_key||v.no_key)));
   const kPrem=(sKey&&sNoKey)?sKey.avg-sNoKey.avg:null;
   const sPrem=(sSt&&sNoSt)?sSt.avg-sNoSt.avg:null;
+  const stBest=stats(r1.filter(v=>v.has_key&&v.starts));
+  const stWorst=stats(r1.filter(v=>v.no_key&&!v.starts));
+  const fullPrem=(stBest&&stWorst)?stBest.avg-stWorst.avg:null;
 
   // ── Doc mix ────────────────────────────────────────────────────────────────
   const dmap={};
@@ -449,6 +481,29 @@ function renderPage(V) {
     const p=dtot?(100*n/dtot):0;
     return `<div class="doc-row"><span class="doc-lbl">${d}</span><div class="doc-bar"><div class="doc-fill" style="width:${p.toFixed(1)}%"></div></div><span class="doc-pct">${p.toFixed(1)}%</span></div>`;
   }).join('');
+
+  // ── Insight data ───────────────────────────────────────────────────────────
+  // Period
+  const volChgPrior  = s1&&s2&&s2.count?((s1.count-s2.count)/s2.count*100):null;
+  const priceChgPrior= s1&&s2&&s2.avg?  ((s1.avg  -s2.avg  )/s2.avg  *100):null;
+  const priceChgYoY  = s1&&s3&&s3.avg?  ((s1.avg  -s3.avg  )/s3.avg  *100):null;
+
+  // Documentation
+  const stTitle=stats(r1.filter(v=>v.doc==='Title')), stSalv=stats(r1.filter(v=>v.doc==='Salvage'));
+  const stAband=stats(r1.filter(v=>v.doc==='Abandoned'));
+  const docPrem=(stTitle&&stSalv)?stTitle.avg-stSalv.avg:null;
+
+  // Regional spread
+  const regionStats=Object.entries(rg1).map(([k,recs])=>({r:k,st:stats(recs)})).filter(x=>x.st&&x.st.count>=15).sort((a,b)=>b.st.avg-a.st.avg);
+  const topReg=regionStats[0], botReg=regionStats.at(-1);
+
+  // Make liquidity
+  const top2vol=(makeData[0]?.val??0)+(makeData[1]?.val??0);
+  const top2pct=s1?.count?(100*top2vol/s1.count):0;
+
+  // Vehicle type
+  const carSt=stats(tg1['Cars']||[]), truckSt=stats(tg1['Trucks']||[]), suvSt=stats(tg1['SUVs']||[]);
+  const lightAvg=s1?.avg??0;
 
   // ── 12-month trend ─────────────────────────────────────────────────────────
   const tMonths=allM.slice(-12);
@@ -470,6 +525,11 @@ function renderPage(V) {
       <h2>60-Day Period Comparison</h2>
       <p>Current vs prior 60 days and the same period one year ago.</p>
     </div>
+    ${(()=>{
+      if(volChgPrior===null) return '';
+      const vd=dFmt(volChgPrior), pd=dFmt(priceChgPrior??0), yd=priceChgYoY!==null?dFmt(priceChgYoY):'';
+      return insight(`Volume is ${vd} and avg price is ${pd} vs the prior 60 days.${yd?' Year-over-year, prices are '+yd+'.':''}`);
+    })()}
     <div class="mi-g2">
       <div class="mi-card">
         <div class="mi-card-title">Volume &amp; Price by Period</div>
@@ -505,6 +565,12 @@ function renderPage(V) {
         ${donut}
         <div class="donut-legend">${donutLegend}</div>
       </div>
+      ${(()=>{
+        if(!truckSt||!suvSt||!carSt) return '';
+        const truckPrem=truckSt.avg-lightAvg, suvPrem=suvSt.avg-lightAvg;
+        const topType=truckSt.avg>suvSt.avg?`Trucks average <span class="hi">${fmtD(truckSt.avg)}</span> — <span class="iup">+${fmtD(Math.abs(truckPrem))}</span> above the overall avg`:`SUVs average <span class="hi">${fmtD(suvSt.avg)}</span> — <span class="iup">+${fmtD(Math.abs(suvPrem))}</span> above the overall avg`;
+        return insight(`${topType}. Cars are the highest-volume category and the most liquid for quick resale.`);
+      })()}
     </div>
 
     <!-- Makes + Regions -->
@@ -515,10 +581,19 @@ function renderPage(V) {
       <div class="mi-card">
         <div class="mi-card-title">Top 15 Makes &nbsp;<span style="float:right;font-weight:400">Avg $</span></div>
         <div class="mi-chart">${hBarSVG(makeData,{W:480,rowH:28,padL:100,padR:72})}</div>
+        ${(()=>{
+          if(!makeData[0]||!makeData[1]) return '';
+          return insight(`<span class="hi">${makeData[0].label}</span> and <span class="hi">${makeData[1].label}</span> account for <span class="hi">${top2pct.toFixed(0)}%</span> of volume — the highest-liquidity makes for quick resale. ${makeData[0].label} leads both volume and avg price among top makes.`);
+        })()}
       </div>
       <div class="mi-card">
         <div class="mi-card-title">By Region &nbsp;<span style="float:right;font-weight:400">Avg $</span></div>
         <div class="mi-chart">${hBarSVG(regionData,{W:480,rowH:28,padL:100,padR:72})}</div>
+        ${(()=>{
+          if(!topReg||!botReg||topReg.r===botReg.r) return '';
+          const spread=topReg.st.avg-botReg.st.avg;
+          return insight(`<span class="hi">${rl(topReg.r)}</span> commands the highest avg price at <span class="hi">${fmtD(topReg.st.avg)}</span> vs <span class="hi">${fmtD(botReg.st.avg)}</span> in ${rl(botReg.r)} — a <span class="hi">${fmtD(spread)}</span> regional spread on identical vehicles.`);
+        })()}
       </div>
     </div>
 
@@ -526,8 +601,12 @@ function renderPage(V) {
     <div class="mi-section"><h2>Pricing by Mileage &amp; Condition</h2></div>
     <div class="mi-g2">
       <div class="mi-card">
-        <div class="mi-card-title">By Odometer Band &nbsp;<span style="float:right;font-weight:400">Avg $</span></div>
-        <div class="mi-chart">${hBarSVG(odoData,{W:420,rowH:30,padL:100,padR:72})}</div>
+        <div class="mi-card-title">By Odometer Band &nbsp;<span style="float:right;font-weight:400">% of total &nbsp;·&nbsp; Avg $</span></div>
+        <div class="mi-chart">${hBarSVG(odoData,{W:440,rowH:30,padL:100,padR:108})}</div>
+        ${(()=>{
+          if(!stWithOdo||!stNoOdo||odoPrem<=0) return '';
+          return insight(`<span class="hi">${noOdoPct.toFixed(0)}%</span> of vehicles arrive with no odometer reading. Those with a readable mileage average <span class="hi">${fmtD(odoPrem)} more</span> (<span class="iup">+${odoPremPct.toFixed(0)}%</span>). <strong>Bring a jump box</strong> — starting a car lets you capture the odometer, which buyers pay a significant premium for. The reading confirms the mileage band and unlocks that value immediately.`);
+        })()}
       </div>
       <div class="mi-card">
         <div class="mi-card-title">Condition Premiums (last 60d)</div>
@@ -543,8 +622,17 @@ function renderPage(V) {
             <div class="cond-sub">${sSt?fmtD(sSt.avg):'-'} vs ${sNoSt?fmtD(sNoSt.avg):'-'}</div>
           </div>
         </div>
-        <div class="mi-card-title" style="margin-top:4px">Documentation Mix (last 60d)</div>
+        ${(()=>{
+          if(!fullPrem||!kPrem||!sPrem) return '';
+          return insight(`A vehicle with a key that starts sells for <span class="hi">${fmtD(fullPrem)} more</span> than a no-key, non-starter. Key alone adds <span class="hi">+${fmtD(kPrem)}</span>; starts alone adds <span class="hi">+${fmtD(sPrem)}</span>. A spare key and a jump box are two of the cheapest ways to move vehicles up the value ladder.`);
+        })()}
+        <div class="mi-card-title" style="margin-top:18px">Documentation Mix (last 60d)</div>
         ${docBars}
+        ${(()=>{
+          if(!docPrem) return '';
+          const abPrem=stTitle&&stAband?stTitle.avg-stAband.avg:null;
+          return insight(`Title vehicles average <span class="hi">${fmtD(stTitle?.avg??0)}</span> — <span class="iup">+${fmtD(docPrem)}</span> more than Salvage.${abPrem?` Abandoned vehicles (often the cleanest paper) average <span class="hi">${fmtD(stAband?.avg??0)}</span>.`:''} Know your document type before bidding — it sets your ceiling.`);
+        })()}
       </div>
     </div>
 
