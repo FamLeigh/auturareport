@@ -29,7 +29,11 @@
       </svg>
       <span style="font-size:.95rem;font-weight:700;color:var(--text);letter-spacing:-.01em;">Autura Marketplace Report</span>
     </a>
-    <div style="display:flex;align-items:center;gap:10px;">
+    <div style="display:flex;align-items:center;gap:14px;">
+      <nav style="display:flex;gap:4px;">
+        <a href="/" style="font-size:13px;font-weight:500;color:var(--text-muted);text-decoration:none;padding:6px 10px;border-radius:6px;transition:color .15s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Valuation</a>
+        <a href="/market" style="font-size:13px;font-weight:500;color:var(--text-muted);text-decoration:none;padding:6px 10px;border-radius:6px;transition:color .15s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Market Insights</a>
+      </nav>
       <span style="font-size:11px;font-weight:600;background:var(--accent-glow);color:var(--accent);border:1px solid rgba(240,165,0,.3);border-radius:4px;padding:2px 8px;letter-spacing:.04em;">BETA</span>
       <button class="theme-toggle" id="theme-toggle" aria-label="Toggle light/dark mode">
         <svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>
