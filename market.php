@@ -144,6 +144,8 @@ input[type=range].ic-range { width: 100%; accent-color: var(--accent); margin-bo
 .ic-box.ic-highlight { background: var(--accent-glow); border-color: rgba(240,165,0,.35); }
 .ic-box.ic-highlight .ic-box-val { font-size: 1.55rem; color: var(--accent); }
 .ic-divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+.ic-period-lbl { font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--text-muted); margin: 14px 0 7px; }
+.ic-period-lbl em { font-style: normal; font-weight: 400; text-transform: none; letter-spacing: 0; }
 
 /* print button */
 .mi-print-btn {
@@ -413,33 +415,35 @@ function kpiCard(title,value,sub,s1,s2,key){
   return `<div class="mi-card"><div class="mi-card-title">${title}</div><div class="kpi-val">${value}</div><div class="kpi-lbl">${sub}</div>${dh}</div>`;
 }
 
-// ── Impact slider ─────────────────────────────────────────────────────────────
-function setupImpactSlider(currentWithOdo, total, prem) {
-  const slider = document.getElementById('odo-slider');
-  const boxAdd = document.getElementById('ic-add-vehicles');
-  const boxVal = document.getElementById('ic-add-value');
-  const boxRev = document.getElementById('ic-add-revenue');
-  const lbl    = document.getElementById('ic-target-pct');
-  const iNote  = document.getElementById('ic-note');
-  if (!slider||!boxRev) return;
+// ── Generic impact slider ─────────────────────────────────────────────────────
+function makeImpactSlider({sliderId, pctLblId, noteId, label,
+    v60Id, val60Id, rev60Id, vYrId, valYrId, revYrId,
+    current, total, prem}) {
 
-  const currentPct = total ? (100*currentWithOdo/total) : 0;
+  const slider = document.getElementById(sliderId);
+  if (!slider) return;
+  const get = id => document.getElementById(id);
+  const set = (id, txt) => { const el=get(id); if(el) el.textContent=txt; };
+  const currentPct = total ? (100*current/total) : 0;
 
   const update = () => {
-    const target    = +slider.value;
-    const targetCnt = Math.round((target/100)*total);
-    const additional= Math.max(0, targetCnt - currentWithOdo);
-    const addlVal   = additional * prem;
-    const addlRev   = addlVal * 0.115;
+    const target     = +slider.value;
+    const additional = Math.max(0, Math.round((target/100)*total) - current);
+    const addlVal    = additional * prem;
+    const addlRev    = addlVal * 0.115;
 
-    if (lbl)    lbl.textContent    = target + '%';
-    if (boxAdd) boxAdd.textContent = '+' + fmtN(additional);
-    if (boxVal) boxVal.textContent = '+' + fmtD(addlVal);
-    if (boxRev) boxRev.textContent = '+' + fmtD(addlRev);
-    if (iNote)  iNote.innerHTML    =
-      `Moving from <strong>${currentPct.toFixed(1)}%</strong> to <strong>${target}%</strong> mileage reporting would have added ` +
-      `<span class="hi">${fmtD(addlRev)}</span> in buyer premium revenue in just the last 60 days — ` +
-      `<span class="hi">${fmtD(addlRev*6)}</span> annualised at this run rate.`;
+    set(pctLblId, target + '%');
+    set(v60Id,    '+' + fmtN(additional));
+    set(val60Id,  '+' + fmtD(addlVal));
+    set(rev60Id,  '+' + fmtD(addlRev));
+    set(vYrId,    '+' + fmtN(additional * 6));
+    set(valYrId,  '+' + fmtD(addlVal * 6));
+    set(revYrId,  '+' + fmtD(addlRev * 6));
+    const n = get(noteId);
+    if (n) n.innerHTML =
+      `Moving from <strong>${currentPct.toFixed(1)}%</strong> to <strong>${target}%</strong> ${label} would add ` +
+      `<span class="hi">${fmtD(addlRev)}</span> in buyer premium over 60 days — ` +
+      `<span class="hi">${fmtD(addlRev*6)}</span> projected for the full year.`;
   };
 
   slider.addEventListener('input', update);
@@ -754,23 +758,108 @@ function renderPage(V) {
             <span>100%</span>
           </div>
 
+          <div class="ic-period-lbl">60-Day Impact</div>
           <div class="ic-boxes">
             <div class="ic-box">
               <div class="ic-box-val" id="ic-add-vehicles">—</div>
-              <div class="ic-box-lbl">Additional vehicles<br>with mileage</div>
+              <div class="ic-box-lbl">More vehicles<br>with mileage</div>
             </div>
             <div class="ic-box">
               <div class="ic-box-val" id="ic-add-value">—</div>
-              <div class="ic-box-lbl">Additional sale<br>value generated</div>
+              <div class="ic-box-lbl">Additional sale<br>value</div>
             </div>
             <div class="ic-box ic-highlight">
               <div class="ic-box-val" id="ic-add-revenue">—</div>
-              <div class="ic-box-lbl">Your additional<br>buyer premium</div>
+              <div class="ic-box-lbl">Your buyer<br>premium</div>
             </div>
           </div>
 
-          <hr class="ic-divider">
-          <div class="mi-insight" style="margin-top:0" id="ic-note"></div>
+          <div class="ic-period-lbl">Full-Year Projection <em>(× 6 periods)</em></div>
+          <div class="ic-boxes">
+            <div class="ic-box">
+              <div class="ic-box-val" id="ic-add-vehicles-yr">—</div>
+              <div class="ic-box-lbl">More vehicles<br>per year</div>
+            </div>
+            <div class="ic-box">
+              <div class="ic-box-val" id="ic-add-value-yr">—</div>
+              <div class="ic-box-lbl">Additional sale<br>value / year</div>
+            </div>
+            <div class="ic-box ic-highlight">
+              <div class="ic-box-val" id="ic-add-revenue-yr">—</div>
+              <div class="ic-box-lbl">Your premium<br>per year</div>
+            </div>
+          </div>
+
+          <div class="mi-insight" style="margin-top:14px" id="ic-note"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Key + Starts impact -->
+    <div class="mi-card" style="margin-bottom:16px">
+      <div class="ic-grid">
+        <div>
+          <div class="mi-card-title">Current State — Key &amp; Starts (Last 60 Days)</div>
+          <div class="ic-stat">
+            <span class="ic-big">${(r1.length?(100*r1.filter(v=>v.has_key&&v.starts).length/r1.length):0).toFixed(1)}%</span>
+            <span class="ic-desc">of vehicles arrive with a key and able to start<br>(${fmtN(r1.filter(v=>v.has_key&&v.starts).length)} of ${fmtN(r1.length)})</span>
+          </div>
+          <div class="ic-stat">
+            <span class="ic-big">${fullPrem!=null?fmtD(fullPrem):'—'}</span>
+            <span class="ic-desc">avg premium: has key + starts vs no key + no start</span>
+          </div>
+          <div class="ic-stat">
+            <span class="ic-big">11.5%</span>
+            <span class="ic-desc">your buyer premium rate</span>
+          </div>
+        </div>
+        <div>
+          <div class="mi-card-title">Scenario Calculator</div>
+          <div class="ic-slider-label">
+            Target: vehicles with key that start &nbsp;
+            <strong id="ks-target-pct">50%</strong>
+          </div>
+          <input type="range" id="ks-slider" class="ic-range"
+            min="${Math.max(1,Math.ceil(r1.length?100*r1.filter(v=>v.has_key&&v.starts).length/r1.length:0))}"
+            max="100" value="50" step="1">
+          <div class="ic-slider-ends">
+            <span>Current: ${(r1.length?(100*r1.filter(v=>v.has_key&&v.starts).length/r1.length):0).toFixed(1)}%</span>
+            <span>100%</span>
+          </div>
+
+          <div class="ic-period-lbl">60-Day Impact</div>
+          <div class="ic-boxes">
+            <div class="ic-box">
+              <div class="ic-box-val" id="ks-add-vehicles">—</div>
+              <div class="ic-box-lbl">More vehicles<br>key + starts</div>
+            </div>
+            <div class="ic-box">
+              <div class="ic-box-val" id="ks-add-value">—</div>
+              <div class="ic-box-lbl">Additional sale<br>value</div>
+            </div>
+            <div class="ic-box ic-highlight">
+              <div class="ic-box-val" id="ks-add-revenue">—</div>
+              <div class="ic-box-lbl">Your buyer<br>premium</div>
+            </div>
+          </div>
+
+          <div class="ic-period-lbl">Full-Year Projection <em>(× 6 periods)</em></div>
+          <div class="ic-boxes">
+            <div class="ic-box">
+              <div class="ic-box-val" id="ks-add-vehicles-yr">—</div>
+              <div class="ic-box-lbl">More vehicles<br>per year</div>
+            </div>
+            <div class="ic-box">
+              <div class="ic-box-val" id="ks-add-value-yr">—</div>
+              <div class="ic-box-lbl">Additional sale<br>value / year</div>
+            </div>
+            <div class="ic-box ic-highlight">
+              <div class="ic-box-val" id="ks-add-revenue-yr">—</div>
+              <div class="ic-box-lbl">Your premium<br>per year</div>
+            </div>
+          </div>
+
+          <div class="mi-insight" style="margin-top:14px" id="ks-note"></div>
         </div>
       </div>
     </div>
@@ -789,7 +878,22 @@ function renderPage(V) {
     </div>
   `;
 
-  setupImpactSlider(withOdo.length, r1.length, odoPrem);
+  makeImpactSlider({
+    sliderId:'odo-slider', pctLblId:'ic-target-pct', noteId:'ic-note',
+    label:'mileage reporting',
+    v60Id:'ic-add-vehicles', val60Id:'ic-add-value', rev60Id:'ic-add-revenue',
+    vYrId:'ic-add-vehicles-yr', valYrId:'ic-add-value-yr', revYrId:'ic-add-revenue-yr',
+    current:withOdo.length, total:r1.length, prem:odoPrem
+  });
+
+  const ksGood = r1.filter(v=>v.has_key&&v.starts).length;
+  makeImpactSlider({
+    sliderId:'ks-slider', pctLblId:'ks-target-pct', noteId:'ks-note',
+    label:'vehicles arriving with key that start',
+    v60Id:'ks-add-vehicles', val60Id:'ks-add-value', rev60Id:'ks-add-revenue',
+    vYrId:'ks-add-vehicles-yr', valYrId:'ks-add-value-yr', revYrId:'ks-add-revenue-yr',
+    current:ksGood, total:r1.length, prem:fullPrem??0
+  });
 
   // ── Condition profile tables ───────────────────────────────────────────────
   const n = r1.length || 1;
