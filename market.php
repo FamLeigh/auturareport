@@ -157,6 +157,18 @@ input[type=range].ic-range { width: 100%; accent-color: var(--accent); margin-bo
 .mi-print-btn:hover { border-color: var(--accent); color: var(--accent); }
 .mi-print-footer { display: none; }
 
+/* region selector */
+.mi-region-row { margin-top: 16px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.mi-region-row label { font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--text-muted); }
+.mi-region-select {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text); font-size: 13px; font-weight: 600; padding: 7px 12px;
+  cursor: pointer; min-width: 220px; transition: border-color .15s;
+}
+.mi-region-select:hover { border-color: var(--accent); }
+.mi-region-select:focus { outline: none; border-color: var(--accent); }
+.mi-region-hint { font-size: 12px; color: var(--text-muted); }
+
 /* loading */
 .mi-load { text-align: center; padding: 80px 24px; color: var(--text-muted); }
 @keyframes mi-spin { to { transform: rotate(360deg); } }
@@ -164,7 +176,7 @@ input[type=range].ic-range { width: 100%; accent-color: var(--accent); margin-bo
 /* ── Print ────────────────────────────────────────────────────────── */
 @media print {
   @page { margin: 18mm 14mm; }
-  .site-header, .mi-print-btn, .site-footer { display: none !important; }
+  .site-header, .mi-print-btn, .site-footer, .mi-region-row { display: none !important; }
   body { background: #fff !important; color: #111 !important; font-size: 11pt; }
   .mi-hero { padding: 0 0 16px; }
   .mi-card { border: 1px solid #ddd !important; background: #fff !important; break-inside: avoid; margin-bottom: 12pt; }
@@ -202,6 +214,11 @@ include __DIR__ . '/includes/header.php';
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
         Print / Save PDF
       </button>
+    </div>
+    <div class="mi-region-row">
+      <label for="mi-region">Region</label>
+      <select id="mi-region" class="mi-region-select"><option value="">Loading…</option></select>
+      <span class="mi-region-hint" id="mi-region-hint"></span>
     </div>
   </section>
   <div id="mi-body">
@@ -270,6 +287,7 @@ function classify(make,model) {
 
 const RN = {'LAX-CA':'Los Angeles','CHI-IL':'Chicago','DL-TX':'Dallas','NSH-TN':'Nashville','EP-TX':'El Paso','RDU-NC':'Raleigh','SA-TX':'San Antonio','PHX-AZ':'Phoenix','SBC-CA':'San Bernardino','KC-MO':'Kansas City','DET-MI':'Detroit','SJ-CA':'San Jose','OC-CA':'Orange County','SF-CA':'San Francisco','IN-IN':'Indianapolis'};
 const rl = r => RN[r]||r;
+const regionOpt = r => RN[r] ? `${RN[r]} (${r})` : r;
 
 // ── SVG chart helpers ──────────────────────────────────────────────────────────
 
@@ -409,9 +427,10 @@ function pRow(lbl,v1,v2,v3,fn) {
 }
 function sRow(lbl,v1,v2,v3){return `<tr><td>${lbl}</td><td>${v1??'—'}</td><td>${v2??'—'}</td><td>${v3??'—'}</td></tr>`;}
 
-function kpiCard(title,value,sub,s1,s2,key){
+function kpiCard(title,value,sub,s1,s2,key,cmpLabel){
+  cmpLabel = cmpLabel || 'vs prior 60d';
   let dh='';
-  if(s1&&s2&&s2[key]){const d=(s1[key]-s2[key])/s2[key]*100;const cls=d>0?'pos':d<0?'neg':'neu';dh=`<div class="kpi-d ${cls}">${d>0?'▲':d<0?'▼':'–'}${Math.abs(d).toFixed(1)}% vs prior 60d</div>`;}
+  if(s1&&s2&&s2[key]){const d=(s1[key]-s2[key])/s2[key]*100;const cls=d>0?'pos':d<0?'neg':'neu';dh=`<div class="kpi-d ${cls}">${d>0?'▲':d<0?'▼':'–'}${Math.abs(d).toFixed(1)}% ${cmpLabel}</div>`;}
   return `<div class="mi-card"><div class="mi-card-title">${title}</div><div class="kpi-val">${value}</div><div class="kpi-lbl">${sub}</div>${dh}</div>`;
 }
 
@@ -461,17 +480,26 @@ const dFmt = (d,pos='<span class="iup">',neg='<span class="idn">') =>
   d < -0.05 ? `${neg}▼${Math.abs(d).toFixed(1)}%</span>` : '<span>±0%</span>';
 
 // ── Main render ────────────────────────────────────────────────────────────────
-function renderPage(V) {
-  const allM=[...new Set(V.filter(v=>v.month).map(v=>v.month))].sort();
+function renderPage(V, opts={}) {
+  const { region='', allV=V } = opts;
+  // Period windows are derived from the full national dataset so the "last 60 days"
+  // window stays identical across regions (a thin region must not shift the calendar).
+  const allM=[...new Set(allV.filter(v=>v.month).map(v=>v.month))].sort();
   const maxM=allM.at(-1)||'';
   const p1=[addM(maxM,-1),maxM], p2=[addM(maxM,-3),addM(maxM,-2)], p3=[addM(maxM,-13),addM(maxM,-12)];
   const inP=(v,[a,b])=>v.month&&v.month>=a&&v.month<=b;
   const r1=V.filter(v=>inP(v,p1)), r2=V.filter(v=>inP(v,p2)), r3=V.filter(v=>inP(v,p3));
   const s1=stats(r1), s2=stats(r2), s3=stats(r3);
 
+  // National baseline for the current 60-day window (only needed when a region is selected).
+  const ns1 = region ? stats(allV.filter(v=>inP(v,p1))) : null;
+  const cmpS = region ? ns1 : s2;
+  const cmpL = region ? 'vs national' : 'vs prior 60d';
+
   $('mi-period').innerHTML =
     (AMR_DATA_DATE ? `Dataset: <strong>${AMR_DATA_DATE}</strong> &nbsp;&middot;&nbsp; ` : '') +
-    `Showing ${mlbl(p1[0])} – ${mlbl(p1[1])} &nbsp;&middot;&nbsp; ${fmtN(V.length)} total records`;
+    (region ? `Region: <strong>${regionOpt(region)}</strong> &nbsp;&middot;&nbsp; ` : '') +
+    `Showing ${mlbl(p1[0])} – ${mlbl(p1[1])} &nbsp;&middot;&nbsp; ${fmtN(V.length)} ${region?'region':'total'} records`;
 
   const group=(recs,key)=>{const m={};recs.forEach(v=>{const k=v[key]||'Unknown';if(!m[k])m[k]=[];m[k].push(v);});return m;};
 
@@ -581,9 +609,9 @@ function renderPage(V) {
 
     <!-- KPIs -->
     <div class="mi-g3">
-      ${kpiCard('Total Sales (60d)', fmtN(s1?.count??0), `${mlbl(p1[0])} – ${mlbl(p1[1])}`, s1, s2, 'count')}
-      ${kpiCard('Avg Sale Price', fmtD(s1?.avg??0), 'Last 60 days', s1, s2, 'avg')}
-      ${kpiCard('Median Sale Price', fmtD(s1?.median??0), 'Last 60 days', s1, s2, 'median')}
+      ${kpiCard('Total Sales (60d)', fmtN(s1?.count??0), `${mlbl(p1[0])} – ${mlbl(p1[1])}`, s1, cmpS, 'count', cmpL)}
+      ${kpiCard('Avg Sale Price', fmtD(s1?.avg??0), 'Last 60 days', s1, cmpS, 'avg', cmpL)}
+      ${kpiCard('Median Sale Price', fmtD(s1?.median??0), 'Last 60 days', s1, cmpS, 'median', cmpL)}
     </div>
 
     <!-- Period chart + table -->
@@ -653,13 +681,37 @@ function renderPage(V) {
         })()}
       </div>
       <div class="mi-card">
+        ${region ? (()=>{
+          // ── Selected region vs national (current 60-day window) ──
+          const rvnDelta=(c,n)=>{ if(c==null||n==null||!n) return '<span class="dz">—</span>'; const d=(c-n)/n*100; if(Math.abs(d)<0.05) return '<span class="dz">±0%</span>'; return `<span class="${d>0?'dp':'dn'}">${d>0?'▲':'▼'}${Math.abs(d).toFixed(1)}%</span>`; };
+          const tr=(lbl,a,b,delta)=>`<tr><td>${lbl}</td><td>${a}</td><td>${b}</td><td>${delta}</td></tr>`;
+          const ppRow=(lbl,key)=>{
+            const rp=s1&&s1.count?100*s1[key]/s1.count:null, np=ns1&&ns1.count?100*ns1[key]/ns1.count:null;
+            const d=(rp!=null&&np!=null)?rp-np:null;
+            const dl=d==null?'<span class="dz">—</span>':(Math.abs(d)<0.05?'<span class="dz">±0pp</span>':`<span class="${d>0?'dp':'dn'}">${d>0?'▲':'▼'}${Math.abs(d).toFixed(1)}pp</span>`);
+            return tr(lbl, rp!=null?rp.toFixed(1)+'%':'—', np!=null?np.toFixed(1)+'%':'—', dl);
+          };
+          const sharePct=ns1&&ns1.count?100*(s1?.count??0)/ns1.count:0;
+          const priceDiff=ns1&&ns1.avg?((s1?.avg??0)-ns1.avg)/ns1.avg*100:0;
+          const tbl=`<table class="mi-tbl">
+            <thead><tr><th>Metric</th><th>This Region</th><th>National</th><th>Δ</th></tr></thead>
+            <tbody>
+              ${tr('Volume (60d)', fmtN(s1?.count??0), fmtN(ns1?.count??0), `<span class="dz">${sharePct.toFixed(1)}% of nat</span>`)}
+              ${tr('Avg Price', fmtD(s1?.avg??0), fmtD(ns1?.avg??0), rvnDelta(s1?.avg, ns1?.avg))}
+              ${tr('Median', fmtD(s1?.median??0), fmtD(ns1?.median??0), rvnDelta(s1?.median, ns1?.median))}
+              ${ppRow('Key %','withKey')}
+              ${ppRow('Starts %','starts')}
+            </tbody></table>`;
+          const ins=(ns1&&s1)?insight(`<span class="hi">${regionOpt(region)}</span> accounts for <span class="hi">${sharePct.toFixed(1)}%</span> of national volume. Its avg sale price of <span class="hi">${fmtD(s1.avg)}</span> is ${priceDiff>=0?`<span class="iup">▲${priceDiff.toFixed(1)}%</span> above`:`<span class="idn">▼${Math.abs(priceDiff).toFixed(1)}%</span> below`} the national average of <span class="hi">${fmtD(ns1.avg)}</span>.`):'';
+          return `<div class="mi-card-title">${regionOpt(region)} vs National &nbsp;<span style="float:right;font-weight:400">Last 60 days</span></div>${tbl}${ins}`;
+        })() : `
         <div class="mi-card-title">By Region &nbsp;<span style="float:right;font-weight:400">% vol &nbsp;·&nbsp; Avg $</span></div>
         <div class="mi-chart">${hBarSVG(regionData,{W:480,rowH:28,padL:100,padR:108})}</div>
         ${(()=>{
           if(!topReg||!botReg||topReg.r===botReg.r) return '';
           const spread=topReg.st.avg-botReg.st.avg;
           return insight(`<span class="hi">${rl(topReg.r)}</span> commands the highest avg price at <span class="hi">${fmtD(topReg.st.avg)}</span> vs <span class="hi">${fmtD(botReg.st.avg)}</span> in ${rl(botReg.r)} — a <span class="hi">${fmtD(spread)}</span> regional spread on identical vehicles.`);
-        })()}
+        })()}`}
       </div>
     </div>
 
@@ -973,6 +1025,11 @@ function renderPage(V) {
 }
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
+let ALL_V = [];
+function applyRegion(region) {
+  const V = region ? ALL_V.filter(v=>v.region===region) : ALL_V;
+  renderPage(V, { region, allV: ALL_V });
+}
 (async()=>{
   try {
     const res=await fetch('/data-json?v=<?= $amr_data_version ?>');
@@ -984,7 +1041,24 @@ function renderPage(V) {
       region:data.regions[r[5]],doc:data.docs[r[6]],odo:r[7],
       month:r[8]>=0?data.months[r[8]]:'',
     }));
-    renderPage(V);
+    ALL_V = V;
+
+    // Populate region dropdown — all regions, sorted by volume, with record counts.
+    const counts={};
+    V.forEach(v=>{ if(v.region) counts[v.region]=(counts[v.region]||0)+1; });
+    const sorted=Object.keys(counts).sort((a,b)=>counts[b]-counts[a]);
+    const sel=$('mi-region');
+    if (sel) {
+      sel.innerHTML=`<option value="">All Regions (National)</option>`+
+        sorted.map(c=>`<option value="${c}">${regionOpt(c)} — ${fmtN(counts[c])}</option>`).join('');
+      sel.addEventListener('change',()=>{
+        applyRegion(sel.value);
+        const h=$('mi-region-hint');
+        if(h) h.textContent = sel.value ? 'Deltas shown vs national average' : '';
+      });
+    }
+
+    renderPage(V, { region:'', allV:V });
   } catch(e) {
     $('mi-body').innerHTML='<div class="mi-load" style="color:var(--text-muted)">Could not load market data. Try refreshing.</div>';
   }
