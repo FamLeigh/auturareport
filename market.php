@@ -169,6 +169,18 @@ input[type=range].ic-range { width: 100%; accent-color: var(--accent); margin-bo
 .mi-region-select:focus { outline: none; border-color: var(--accent); }
 .mi-region-hint { font-size: 12px; color: var(--text-muted); }
 
+/* period legend — makes the exact date windows explicit */
+.mi-periods { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
+.mi-period-chip {
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 8px 14px; line-height: 1.3;
+}
+.mi-period-chip b {
+  display: block; font-size: 10px; font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--text-muted); margin-bottom: 2px;
+}
+.mi-period-chip span { font-size: 13px; font-weight: 600; color: var(--text); }
+
 /* loading */
 .mi-load { text-align: center; padding: 80px 24px; color: var(--text-muted); }
 @keyframes mi-spin { to { transform: rotate(360deg); } }
@@ -190,6 +202,7 @@ input[type=range].ic-range { width: 100%; accent-color: var(--accent); margin-bo
   .donut-swatch { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
   .doc-fill { background: #f0a500 !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
   .kpi-val { font-size: 22pt; }
+  .mi-period-chip { background: #fff !important; border-color: #ddd !important; }
   .dp { color: #1a6e35 !important; } .dn { color: #a0201a !important; }
   .mi-section { margin: 14pt 0 8pt; }
   .mi-print-footer { display: block !important; text-align: center; font-size: 9pt; color: #777; border-top: 1px solid #ddd; padding-top: 8pt; margin-top: 20pt; }
@@ -242,6 +255,12 @@ const cap  = s  => s ? s.charAt(0) + s.slice(1).toLowerCase() : s;
 
 const MON = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const mlbl = ym => ym ? MON[+ym.split('-')[1]] + ' ' + ym.split('-')[0] : '—';
+// Compact month range: "Mar – Apr 2026" (same year) or "Dec 2025 – Jan 2026".
+const rangeLbl = ([a,b]) => {
+  if(!a||!b) return '—';
+  const ya=a.split('-')[0], ma=+a.split('-')[1], yb=b.split('-')[0], mb=+b.split('-')[1];
+  return ya===yb ? `${MON[ma]} – ${MON[mb]} ${yb}` : `${MON[ma]} ${ya} – ${MON[mb]} ${yb}`;
+};
 
 const CHART_COLORS = ['#f0a500','#3b82f6','#22c55e','#a855f7','#ef4444','#f97316','#06b6d4','#84cc16'];
 
@@ -267,6 +286,24 @@ function addM(ym,n) {
   let [y,m]=ym.split('-').map(Number); m+=n;
   while(m>12){m-=12;y++;} while(m<=0){m+=12;y--;}
   return `${y}-${String(m).padStart(2,'0')}`;
+}
+function daysInMonth(y,mo){ // mo = 1..12
+  return [31,(y%4===0&&(y%100!==0||y%400===0))?29:28,31,30,31,30,31,31,30,31,30,31][mo-1];
+}
+// Source data is month-granular ("Monthly auction start date"), so 60-day windows
+// are approximated as 2 calendar months. If the data date falls mid-month, that
+// trailing month is partial and would understate the current window — so anchor on
+// the last COMPLETE month instead, keeping all comparison windows equal-length.
+function lastCompleteMonth(maxM, dataDate){
+  if(!maxM) return maxM;
+  const m = dataDate && dataDate.match(/([A-Za-z]{3,})\s+(\d{1,2}),\s*(\d{4})/);
+  if(!m) return maxM;
+  const mo = MON.indexOf(m[1].slice(0,3)); // 1..12 (0 if unrecognized)
+  if(mo<1) return maxM;
+  const day=+m[2], yr=+m[3], dd=`${yr}-${String(mo).padStart(2,'0')}`;
+  // The latest data month equals the data-date month and the month hasn't ended → partial.
+  if(dd===maxM && day<daysInMonth(yr,mo)) return addM(maxM,-1);
+  return maxM;
 }
 
 // ── Classification ─────────────────────────────────────────────────────────────
@@ -486,7 +523,10 @@ function renderPage(V, opts={}) {
   // window stays identical across regions (a thin region must not shift the calendar).
   const allM=[...new Set(allV.filter(v=>v.month).map(v=>v.month))].sort();
   const maxM=allM.at(-1)||'';
-  const p1=[addM(maxM,-1),maxM], p2=[addM(maxM,-3),addM(maxM,-2)], p3=[addM(maxM,-13),addM(maxM,-12)];
+  // Anchor on the last complete month so a partial trailing month (per the data date)
+  // doesn't understate the current window vs the full prior / year-ago windows.
+  const anchorM=lastCompleteMonth(maxM, AMR_DATA_DATE);
+  const p1=[addM(anchorM,-1),anchorM], p2=[addM(anchorM,-3),addM(anchorM,-2)], p3=[addM(anchorM,-13),addM(anchorM,-12)];
   const inP=(v,[a,b])=>v.month&&v.month>=a&&v.month<=b;
   const r1=V.filter(v=>inP(v,p1)), r2=V.filter(v=>inP(v,p2)), r3=V.filter(v=>inP(v,p3));
   const s1=stats(r1), s2=stats(r2), s3=stats(r3);
@@ -600,18 +640,28 @@ function renderPage(V, opts={}) {
   const lightAvg=s1?.avg??0;
 
   // ── 12-month trend ─────────────────────────────────────────────────────────
-  const tMonths=allM.slice(-12);
+  let tEnd=allM.indexOf(anchorM); if(tEnd<0) tEnd=allM.length-1;
+  const tMonths=allM.slice(Math.max(0,tEnd-11), tEnd+1);
   const tData=tMonths.map(m=>{const r=V.filter(v=>v.month===m);return{m,cnt:r.length,avg:r.length?Math.round(r.reduce((a,v)=>a+v.price,0)/r.length):0};});
   const trend=trendSVG(tData,tMonths);
 
   // ── Assemble ───────────────────────────────────────────────────────────────
+  const curLbl = rangeLbl(p1);
+
   $('mi-body').innerHTML = `
+
+    <!-- Period windows legend -->
+    <div class="mi-periods">
+      <div class="mi-period-chip"><b>Current 60 days</b><span>${curLbl}</span></div>
+      <div class="mi-period-chip"><b>Prior 60 days</b><span>${rangeLbl(p2)}</span></div>
+      <div class="mi-period-chip"><b>Same period last year</b><span>${rangeLbl(p3)}</span></div>
+    </div>
 
     <!-- KPIs -->
     <div class="mi-g3">
-      ${kpiCard('Total Sales (60d)', fmtN(s1?.count??0), `${mlbl(p1[0])} – ${mlbl(p1[1])}`, s1, cmpS, 'count', cmpL)}
-      ${kpiCard('Avg Sale Price', fmtD(s1?.avg??0), 'Last 60 days', s1, cmpS, 'avg', cmpL)}
-      ${kpiCard('Median Sale Price', fmtD(s1?.median??0), 'Last 60 days', s1, cmpS, 'median', cmpL)}
+      ${kpiCard('Total Sales (60d)', fmtN(s1?.count??0), curLbl, s1, cmpS, 'count', cmpL)}
+      ${kpiCard('Avg Sale Price', fmtD(s1?.avg??0), curLbl, s1, cmpS, 'avg', cmpL)}
+      ${kpiCard('Median Sale Price', fmtD(s1?.median??0), curLbl, s1, cmpS, 'median', cmpL)}
     </div>
 
     <!-- Period chart + table -->
@@ -921,7 +971,7 @@ function renderPage(V, opts={}) {
     <!-- 12-month trend -->
     <div class="mi-section">
       <h2>12-Month Trend</h2>
-      <p>Monthly volume (bars) and average sale price (line) across all records in the dataset.</p>
+      <p>Monthly volume (bars) and average sale price (line) across the most recent complete months. A partial trailing month (per the data date) is excluded.</p>
     </div>
     <div class="mi-card" style="margin-bottom:60px">
       <div class="mi-legend">
