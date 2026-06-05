@@ -4,9 +4,9 @@
  * Reads data/heckel/*.csv → writes data/amr-data.json + data/amr-meta.json
  *
  * Records are stored as compact arrays to minimize file size:
- * [make_idx, model_idx, year, price, flags, region_idx, doc_idx, odo, month_idx]
+ * [make_idx, model_idx, year, price, flags, region_idx, doc_idx, odo, month_idx, seller_idx]
  * flags: bit 0 = has_key, bit 1 = no_key, bit 2 = starts
- * month_idx: -1 if month unknown
+ * month_idx: -1 if month unknown, seller_idx: -1 if seller unknown
  */
 
 $MONTHS = [
@@ -357,6 +357,7 @@ $models  = [];
 $regions = [];
 $docs    = [];
 $months  = [];
+$sellers = [];
 $records = [];
 $skipped = 0;
 $total_rows = 0;
@@ -402,6 +403,7 @@ foreach ($files as $file) {
     $region_i = $idx['auction region']             ?? null;
     $doc_i    = $idx['vehicle documentation type'] ?? null;
     $odo_i    = $idx['vehicle odometer']           ?? null;
+    $seller_i = $idx['seller name']                ?? null;
     $month_i  = 0;
 
     if ($price_i === null || $year_i === null || $make_i === null || $model_i === null) {
@@ -430,6 +432,7 @@ foreach ($files as $file) {
         $region    = strtoupper(trim($row[$region_i ?? -1] ?? ''));
         $doc_raw   = trim($row[$doc_i ?? -1] ?? '');
         $odo_raw   = trim($row[$odo_i ?? -1] ?? '');
+        $seller    = trim($row[$seller_i ?? -1] ?? '');
 
         $has_key = in_array($key_raw, [
             'HAS KEYS', 'KEY MADE', 'MADE KEY',
@@ -466,6 +469,7 @@ foreach ($files as $file) {
             intern($doc,    $docs),
             $odo,
             $month !== '' ? intern($month, $months) : -1,
+            $seller !== '' ? intern($seller, $sellers) : -1,
         ];
     }
 
@@ -495,6 +499,7 @@ $output = [
     'regions' => dict_to_array($regions),
     'docs'    => dict_to_array($docs),
     'months'  => dict_to_array($months),
+    'sellers' => dict_to_array($sellers),
     'records' => $records,
 ];
 
