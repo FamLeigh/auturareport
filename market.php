@@ -159,14 +159,40 @@ input[type=range].ic-range { width: 100%; accent-color: var(--accent); margin-bo
 
 /* region selector */
 .mi-region-row { margin-top: 16px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.mi-region-row label { font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--text-muted); }
-.mi-region-select {
+.mi-filter-lbl { font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--text-muted); }
+.mi-ms { position: relative; display: inline-block; }
+.mi-ms-btn {
   background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
   color: var(--text); font-size: 13px; font-weight: 600; padding: 7px 12px;
-  cursor: pointer; min-width: 220px; transition: border-color .15s;
+  cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: border-color .15s;
 }
-.mi-region-select:hover { border-color: var(--accent); }
-.mi-region-select:focus { outline: none; border-color: var(--accent); }
+.mi-ms-btn:hover { border-color: var(--accent); }
+.mi-ms-lbl { color: var(--text-muted); font-weight: 700; }
+.mi-ms.mi-ms-on .mi-ms-btn { border-color: var(--accent); color: var(--accent); }
+.mi-ms.mi-ms-on .mi-ms-lbl { color: var(--accent); }
+.mi-ms-caret { font-size: 10px; color: var(--text-muted); }
+.mi-ms-pop {
+  position: absolute; top: calc(100% + 5px); left: 0; z-index: 30;
+  width: 290px; max-width: 84vw; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; box-shadow: 0 8px 28px rgba(0,0,0,.14); padding: 10px;
+}
+.mi-ms-search {
+  width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 7px;
+  color: var(--text); font-size: 13px; padding: 8px 10px;
+}
+.mi-ms-search:focus { outline: none; border-color: var(--accent); }
+.mi-ms-tools { display: flex; justify-content: flex-end; margin: 6px 0 2px; }
+.mi-ms-clear { background: none; border: none; color: var(--text-muted); font-size: 12px; cursor: pointer; padding: 2px 4px; }
+.mi-ms-clear:hover { color: var(--accent); }
+.mi-ms-list { max-height: 260px; overflow-y: auto; }
+.mi-ms-opt { display: flex; align-items: center; gap: 9px; padding: 6px; font-size: 13px; cursor: pointer; border-radius: 6px; }
+.mi-ms-opt:hover { background: var(--surface-2); }
+.mi-ms-opt input { accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
+.mi-ms-opt-l { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mi-ms-opt-c { color: var(--text-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.mi-ms-empty { padding: 14px; text-align: center; color: var(--text-muted); font-size: 13px; }
+.mi-ms-reset { background: none; border: none; color: var(--text-muted); font-size: 12px; font-weight: 600; cursor: pointer; text-decoration: underline; }
+.mi-ms-reset:hover { color: var(--accent); }
 .mi-region-hint { font-size: 12px; color: var(--text-muted); }
 
 /* period legend — makes the exact date windows explicit */
@@ -228,9 +254,11 @@ include __DIR__ . '/includes/header.php';
         Print / Save PDF
       </button>
     </div>
-    <div class="mi-region-row">
-      <label for="mi-region">Region</label>
-      <select id="mi-region" class="mi-region-select"><option value="">Loading…</option></select>
+    <div class="mi-region-row" id="mi-filter-row">
+      <span class="mi-filter-lbl">Filter</span>
+      <div class="mi-ms" id="ms-region"></div>
+      <div class="mi-ms" id="ms-seller"></div>
+      <button type="button" class="mi-ms-reset" id="mi-filter-reset" hidden>Clear all</button>
       <span class="mi-region-hint" id="mi-region-hint"></span>
     </div>
   </section>
@@ -252,6 +280,7 @@ const $    = id => document.getElementById(id);
 const fmtD = n  => '$' + Math.round(n).toLocaleString();
 const fmtN = n  => Math.round(n).toLocaleString();
 const cap  = s  => s ? s.charAt(0) + s.slice(1).toLowerCase() : s;
+const esc  = s  => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 const MON = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const mlbl = ym => ym ? MON[+ym.split('-')[1]] + ' ' + ym.split('-')[0] : '—';
@@ -518,7 +547,14 @@ const dFmt = (d,pos='<span class="iup">',neg='<span class="idn">') =>
 
 // ── Main render ────────────────────────────────────────────────────────────────
 function renderPage(V, opts={}) {
-  const { region='', allV=V } = opts;
+  const { filtered=false, allV=V, regions=[], sellers=[] } = opts;
+  // Human-readable label for the active selection (pooled regions + sellers).
+  const selLabel = (()=>{
+    const parts=[];
+    if(regions.length) parts.push(regions.length===1?regionOpt(regions[0]):`${regions.length} regions`);
+    if(sellers.length) parts.push(sellers.length===1?sellers[0]:`${sellers.length} sellers`);
+    return parts.join(' + ') || 'Selection';
+  })();
   // Period windows are derived from the full national dataset so the "last 60 days"
   // window stays identical across regions (a thin region must not shift the calendar).
   const allM=[...new Set(allV.filter(v=>v.month).map(v=>v.month))].sort();
@@ -531,15 +567,15 @@ function renderPage(V, opts={}) {
   const r1=V.filter(v=>inP(v,p1)), r2=V.filter(v=>inP(v,p2)), r3=V.filter(v=>inP(v,p3));
   const s1=stats(r1), s2=stats(r2), s3=stats(r3);
 
-  // National baseline for the current 60-day window (only needed when a region is selected).
-  const ns1 = region ? stats(allV.filter(v=>inP(v,p1))) : null;
-  const cmpS = region ? ns1 : s2;
-  const cmpL = region ? 'vs national' : 'vs prior 60d';
+  // National baseline for the current 60-day window (only needed when a filter is active).
+  const ns1 = filtered ? stats(allV.filter(v=>inP(v,p1))) : null;
+  const cmpS = filtered ? ns1 : s2;
+  const cmpL = filtered ? 'vs national' : 'vs prior 60d';
 
   $('mi-period').innerHTML =
     (AMR_DATA_DATE ? `Dataset: <strong>${AMR_DATA_DATE}</strong> &nbsp;&middot;&nbsp; ` : '') +
-    (region ? `Region: <strong>${regionOpt(region)}</strong> &nbsp;&middot;&nbsp; ` : '') +
-    `Showing ${mlbl(p1[0])} – ${mlbl(p1[1])} &nbsp;&middot;&nbsp; ${fmtN(V.length)} ${region?'region':'total'} records`;
+    (filtered ? `Filter: <strong>${esc(selLabel)}</strong> &nbsp;&middot;&nbsp; ` : '') +
+    `Showing ${mlbl(p1[0])} – ${mlbl(p1[1])} &nbsp;&middot;&nbsp; ${fmtN(V.length)} ${filtered?'filtered':'total'} records`;
 
   const group=(recs,key)=>{const m={};recs.forEach(v=>{const k=v[key]||'Unknown';if(!m[k])m[k]=[];m[k].push(v);});return m;};
 
@@ -731,8 +767,8 @@ function renderPage(V, opts={}) {
         })()}
       </div>
       <div class="mi-card">
-        ${region ? (()=>{
-          // ── Selected region vs national (current 60-day window) ──
+        ${filtered ? (()=>{
+          // ── Selected filter vs national (current 60-day window) ──
           const rvnDelta=(c,n)=>{ if(c==null||n==null||!n) return '<span class="dz">—</span>'; const d=(c-n)/n*100; if(Math.abs(d)<0.05) return '<span class="dz">±0%</span>'; return `<span class="${d>0?'dp':'dn'}">${d>0?'▲':'▼'}${Math.abs(d).toFixed(1)}%</span>`; };
           const tr=(lbl,a,b,delta)=>`<tr><td>${lbl}</td><td>${a}</td><td>${b}</td><td>${delta}</td></tr>`;
           const ppRow=(lbl,key)=>{
@@ -752,8 +788,8 @@ function renderPage(V, opts={}) {
               ${ppRow('Key %','withKey')}
               ${ppRow('Starts %','starts')}
             </tbody></table>`;
-          const ins=(ns1&&s1)?insight(`<span class="hi">${regionOpt(region)}</span> accounts for <span class="hi">${sharePct.toFixed(1)}%</span> of national volume. Its avg sale price of <span class="hi">${fmtD(s1.avg)}</span> is ${priceDiff>=0?`<span class="iup">▲${priceDiff.toFixed(1)}%</span> above`:`<span class="idn">▼${Math.abs(priceDiff).toFixed(1)}%</span> below`} the national average of <span class="hi">${fmtD(ns1.avg)}</span>.`):'';
-          return `<div class="mi-card-title">${regionOpt(region)} vs National &nbsp;<span style="float:right;font-weight:400">Last 60 days</span></div>${tbl}${ins}`;
+          const ins=(ns1&&s1)?insight(`<span class="hi">${esc(selLabel)}</span> accounts for <span class="hi">${sharePct.toFixed(1)}%</span> of national volume. Its avg sale price of <span class="hi">${fmtD(s1.avg)}</span> is ${priceDiff>=0?`<span class="iup">▲${priceDiff.toFixed(1)}%</span> above`:`<span class="idn">▼${Math.abs(priceDiff).toFixed(1)}%</span> below`} the national average of <span class="hi">${fmtD(ns1.avg)}</span>.`):'';
+          return `<div class="mi-card-title">${esc(selLabel)} vs National &nbsp;<span style="float:right;font-weight:400">Last 60 days</span></div>${tbl}${ins}`;
         })() : `
         <div class="mi-card-title">By Region &nbsp;<span style="float:right;font-weight:400">% vol &nbsp;·&nbsp; Avg $</span></div>
         <div class="mi-chart">${hBarSVG(regionData,{W:480,rowH:28,padL:100,padR:108})}</div>
@@ -1074,11 +1110,67 @@ function renderPage(V, opts={}) {
   }
 }
 
+// ── Searchable multi-select widget ──────────────────────────────────────────────
+function makeMultiSelect({mountId, label, items, onChange}) {
+  const root = document.getElementById(mountId);
+  if (!root) return { get:()=>new Set(), clear:()=>{} };
+  const selected = new Set();
+  root.classList.add('mi-ms');
+  root.innerHTML = `
+    <button type="button" class="mi-ms-btn"><span class="mi-ms-lbl">${esc(label)}:</span> <span class="mi-ms-sum">All</span> <span class="mi-ms-caret">▾</span></button>
+    <div class="mi-ms-pop" hidden>
+      <input type="text" class="mi-ms-search" placeholder="Search ${esc(label.toLowerCase())}…">
+      <div class="mi-ms-tools"><button type="button" class="mi-ms-clear">Clear</button></div>
+      <div class="mi-ms-list"></div>
+    </div>`;
+  const btn=root.querySelector('.mi-ms-btn'), pop=root.querySelector('.mi-ms-pop'),
+        sum=root.querySelector('.mi-ms-sum'), search=root.querySelector('.mi-ms-search'),
+        list=root.querySelector('.mi-ms-list'), clearBtn=root.querySelector('.mi-ms-clear');
+  const labelOf = v => { const f=items.find(it=>it.value===v); return f?f.label:v; };
+
+  const renderList = (q='') => {
+    const ft=q.trim().toLowerCase();
+    const rows=items.map((it,i)=>({it,i})).filter(({it})=>!ft||it.label.toLowerCase().includes(ft)).slice(0,400);
+    list.innerHTML = rows.length ? rows.map(({it,i})=>
+      `<label class="mi-ms-opt"><input type="checkbox" data-i="${i}" ${selected.has(it.value)?'checked':''}><span class="mi-ms-opt-l">${esc(it.label)}</span><span class="mi-ms-opt-c">${fmtN(it.count)}</span></label>`
+    ).join('') : `<div class="mi-ms-empty">No matches</div>`;
+  };
+  const updateSum = () => {
+    sum.textContent = selected.size===0 ? 'All' : selected.size===1 ? labelOf([...selected][0]) : `${selected.size} selected`;
+    root.classList.toggle('mi-ms-on', selected.size>0);
+  };
+
+  btn.addEventListener('click', e=>{
+    e.stopPropagation();
+    const willOpen = pop.hidden;
+    document.querySelectorAll('.mi-ms-pop').forEach(p=>p.hidden=true);
+    pop.hidden = !willOpen;
+    if (willOpen) { search.value=''; renderList(); search.focus(); }
+  });
+  pop.addEventListener('click', e=>e.stopPropagation());
+  search.addEventListener('input', ()=>renderList(search.value));
+  list.addEventListener('change', e=>{
+    const cb=e.target.closest('input[type=checkbox]'); if(!cb) return;
+    const it=items[+cb.dataset.i];
+    if(cb.checked) selected.add(it.value); else selected.delete(it.value);
+    updateSum(); onChange();
+  });
+  clearBtn.addEventListener('click', ()=>{ selected.clear(); renderList(search.value); updateSum(); onChange(); });
+
+  return { get:()=>selected, clear:()=>{ selected.clear(); updateSum(); } };
+}
+
 // ── Boot ──────────────────────────────────────────────────────────────────────
-let ALL_V = [];
-function applyRegion(region) {
-  const V = region ? ALL_V.filter(v=>v.region===region) : ALL_V;
-  renderPage(V, { region, allV: ALL_V });
+let ALL_V = [], msRegion, msSeller;
+function applyFilters() {
+  const rs = msRegion.get(), ss = msSeller.get();
+  const filtered = rs.size>0 || ss.size>0;
+  const V = filtered
+    ? ALL_V.filter(v=>(rs.size===0||rs.has(v.region)) && (ss.size===0||ss.has(v.seller)))
+    : ALL_V;
+  const reset=$('mi-filter-reset'); if(reset) reset.hidden=!filtered;
+  const h=$('mi-region-hint'); if(h) h.textContent = filtered ? 'Deltas shown vs national average' : '';
+  renderPage(V, { filtered, allV:ALL_V, regions:[...rs], sellers:[...ss] });
 }
 (async()=>{
   try {
@@ -1090,25 +1182,24 @@ function applyRegion(region) {
       year:r[2],price:r[3],has_key:!!(r[4]&1),no_key:!!(r[4]&2),starts:!!(r[4]&4),
       region:data.regions[r[5]],doc:data.docs[r[6]],odo:r[7],
       month:r[8]>=0?data.months[r[8]]:'',
+      seller:(data.sellers&&r[9]>=0)?data.sellers[r[9]]:'',
     }));
     ALL_V = V;
 
-    // Populate region dropdown — all regions, sorted by volume, with record counts.
-    const counts={};
-    V.forEach(v=>{ if(v.region) counts[v.region]=(counts[v.region]||0)+1; });
-    const sorted=Object.keys(counts).sort((a,b)=>counts[b]-counts[a]);
-    const sel=$('mi-region');
-    if (sel) {
-      sel.innerHTML=`<option value="">All Regions (National)</option>`+
-        sorted.map(c=>`<option value="${c}">${regionOpt(c)} — ${fmtN(counts[c])}</option>`).join('');
-      sel.addEventListener('change',()=>{
-        applyRegion(sel.value);
-        const h=$('mi-region-hint');
-        if(h) h.textContent = sel.value ? 'Deltas shown vs national average' : '';
-      });
-    }
+    // Build filter items (sorted by volume, with record counts).
+    const tally=(key)=>{const m={};V.forEach(v=>{if(v[key])m[v[key]]=(m[v[key]]||0)+1;});return m;};
+    const rc=tally('region'), sc=tally('seller');
+    const rItems=Object.keys(rc).sort((a,b)=>rc[b]-rc[a]).map(c=>({value:c,label:regionOpt(c),count:rc[c]}));
+    const sItems=Object.keys(sc).sort((a,b)=>sc[b]-sc[a]).map(s=>({value:s,label:s,count:sc[s]}));
+    msRegion=makeMultiSelect({mountId:'ms-region', label:'Region', items:rItems, onChange:applyFilters});
+    msSeller=makeMultiSelect({mountId:'ms-seller', label:'Seller', items:sItems, onChange:applyFilters});
 
-    renderPage(V, { region:'', allV:V });
+    const reset=$('mi-filter-reset');
+    if(reset) reset.addEventListener('click', ()=>{ msRegion.clear(); msSeller.clear(); applyFilters(); });
+    // Close any open popover when clicking elsewhere.
+    document.addEventListener('click', ()=>document.querySelectorAll('.mi-ms-pop').forEach(p=>p.hidden=true));
+
+    renderPage(V, { filtered:false, allV:V, regions:[], sellers:[] });
   } catch(e) {
     $('mi-body').innerHTML='<div class="mi-load" style="color:var(--text-muted)">Could not load market data. Try refreshing.</div>';
   }
