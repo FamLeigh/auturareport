@@ -506,7 +506,14 @@ $output = [
 $data_file = __DIR__ . '/data/amr-data.json';
 $meta_file = __DIR__ . '/data/amr-meta.json';
 
-file_put_contents($data_file, json_encode($output, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+// JSON_INVALID_UTF8_SUBSTITUTE: some seller names contain malformed bytes that
+// would otherwise make json_encode return false (and silently write an empty file).
+$json = json_encode($output, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE);
+if ($json === false || $json === '') {
+    fwrite(STDERR, "ERROR: json_encode failed (" . json_last_error_msg() . ") — not overwriting data file.\n");
+    exit(1);
+}
+file_put_contents($data_file, $json);
 file_put_contents($meta_file, json_encode([
     'count'     => $kept,
     'built'     => date('Y-m-d H:i:s'),
