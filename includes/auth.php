@@ -15,6 +15,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['heckle_pass'])) {
         $_auth_error = 'Only @autura.com email addresses are allowed.';
     } elseif ($pass !== 'heckle') {
         $_auth_error = 'Incorrect password.';
+    } elseif (empty($_POST['agree'])) {
+        $_auth_error = 'Please read and acknowledge the disclaimer to continue.';
     } else {
         $_SESSION['amr_auth']  = true;
         $_SESSION['amr_email'] = $email;
@@ -66,6 +68,13 @@ if (!empty($_SESSION['amr_auth'])) return;
   .field input:focus { outline: none; border-color: #f0a500; background: #fff; }
   .gate button { width: 100%; background: #f0a500; border: none; border-radius: 8px; color: #000; font-size: 14px; font-weight: 700; padding: 13px; cursor: pointer; margin-top: 6px; transition: opacity .15s; }
   .gate button:hover { opacity: .85; }
+  .disc { background: #f8f8f6; border: 1px solid #ddddd8; border-radius: 8px; padding: 12px 14px; margin-bottom: 14px; max-height: 168px; overflow-y: auto; }
+  .disc-title { font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: #999; margin-bottom: 8px; }
+  .disc ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  .disc li { font-size: 11.5px; line-height: 1.5; color: #555; padding-left: 14px; position: relative; }
+  .disc li::before { content: "•"; position: absolute; left: 0; color: #f0a500; }
+  .agree { display: flex; align-items: flex-start; gap: 9px; margin-bottom: 16px; font-size: 13px; line-height: 1.45; color: #333; cursor: pointer; }
+  .agree input { margin-top: 2px; width: 16px; height: 16px; accent-color: #f0a500; flex-shrink: 0; cursor: pointer; }
 </style>
 </head>
 <body>
@@ -89,6 +98,16 @@ if (!empty($_SESSION['amr_auth'])) return;
       <label>Password</label>
       <input type="password" name="heckle_pass" placeholder="Access password">
     </div>
+    <div class="disc">
+      <div class="disc-title">Please read &amp; acknowledge</div>
+      <ul>
+        <?php foreach (AMR_DISCLAIMER_POINTS as $pt): ?><li><?= $pt ?></li><?php endforeach; ?>
+      </ul>
+    </div>
+    <label class="agree">
+      <input type="checkbox" name="agree" value="1" <?= isset($_POST['agree']) ? 'checked' : '' ?>>
+      <span>I acknowledge and agree to the above — this is confidential Autura data, provided for information only and not as financial advice.</span>
+    </label>
     <button type="submit">Enter</button>
   </form>
 </div>

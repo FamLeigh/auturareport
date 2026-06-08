@@ -2,6 +2,8 @@
 require_once __DIR__ . '/includes/auth.php';
 
 $ENTRIES = [
+    ['v1.10 Beta', 'June 8, 2026', 'Site-wide confidentiality disclaimer: acknowledged via a required checkbox at sign-in, shown on every page footer, and printed at the top and bottom of every PDF. Covers not-financial-advice, private/internal-only data, subject-to-change, and no-warranty terms.'],
+    ['v1.9 Beta', 'June 8, 2026', 'Region + Seller filters on the Market Report — searchable multi-selects. Pick multiple regions and/or sellers and the whole report recomputes for that pooled set, with KPI deltas shown vs the national average and a Selection-vs-National comparison card. 60-day comparison windows now anchor on the last complete month (a partial trailing month is excluded) so current volume is not understated; explicit month ranges shown on each KPI card plus a period legend (current / prior / same period last year). Seller Name captured in the data build; JSON build hardened against malformed UTF-8.'],
     ['v1.8 Beta', 'May 28, 2026', 'Revenue Impact Calculators. Two interactive sliders: (1) Mileage Reporting — drag target % to see additional vehicles, added sale value, and buyer premium gain for last 60 days plus full-year projection. (2) Has Key + Starts — same model for the combined condition premium. Both sliders compute live from the actual dataset.'],
     ['v1.7 Beta', 'May 28, 2026', 'Vehicle Condition Profile section added to Autura Market Report. Condition Mix table: has key / no key / key unknown / starts / no start / mileage known / no mileage, each with count, % of total, avg price, and delta vs overall. Problem Combinations table: No Mileage + No Key, No Mileage + No Start, No Key + No Start, and the triple — No Mileage + No Key + No Start. Best-case baseline (key + starts + mileage) shown for comparison.'],
     ['v1.6 Beta', 'May 28, 2026', 'Data-driven insights added throughout Autura Market Report. Six callout panels computed from live data: period trend (vol/price vs prior and YoY), vehicle type premium, top-make liquidity share, regional price spread, odometer/jump-box ROI, and combined key+starts premium. Odometer bands now show % of total alongside avg price.'],
@@ -70,6 +72,9 @@ $ENTRIES = [
     <span class="desc"><?= htmlspecialchars($e[2]) ?></span>
   </div>
   <?php endforeach; ?>
+  <div style="margin-top:36px;padding-top:16px;border-top:1px solid var(--border);font-size:11px;line-height:1.5;color:var(--subtle);">
+    <?= AMR_DISCLAIMER_SHORT ?>
+  </div>
 </div>
 <script>
 (function(){

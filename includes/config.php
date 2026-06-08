@@ -12,6 +12,15 @@ define('SITE_TAGLINE', 'Vehicle valuation data from Autura marketplace sales.');
 define('SITE_URL',     $_is_local ? 'https://auturareport:8890' : 'https://auturareport.com');
 define('CONTACT_EMAIL', 'kleigh@autura.com');
 
+// ── Disclaimer (single source of truth, used on every page + sign-in + print) ──
+define('AMR_DISCLAIMER_POINTS', [
+    'For internal informational purposes only — <strong>not financial, investment, or appraisal advice</strong>. Autura is not a financial advisor.',
+    '<strong>Private &amp; confidential Autura data.</strong> Not to be shared, distributed, or reproduced outside of Autura.',
+    'Aggregated from marketplace activity and <strong>subject to change without notice</strong>.',
+    'Figures are estimates provided &ldquo;as is,&rdquo; without warranty of accuracy or completeness, and should not be the sole basis for any pricing, buying, or selling decision.',
+]);
+define('AMR_DISCLAIMER_SHORT', 'CONFIDENTIAL — Autura internal use only &middot; Informational only, not financial advice &middot; Aggregated data, subject to change without notice &middot; Do not distribute outside Autura.');
+
 if ($_is_local) {
     error_reporting(E_ALL);
     ini_set('display_errors', 1);

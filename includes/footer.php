@@ -7,7 +7,15 @@
       <a href="mailto:<?= CONTACT_EMAIL ?>" style="color:inherit;"><?= CONTACT_EMAIL ?></a>
     </p>
   </div>
+  <div class="amr-disclaimer">
+    <strong>Disclaimer</strong>
+    <ul>
+      <?php foreach (AMR_DISCLAIMER_POINTS as $pt): ?><li><?= $pt ?></li><?php endforeach; ?>
+    </ul>
+  </div>
 </footer>
+
+<div class="amr-print-disc amr-print-bottom"><?= AMR_DISCLAIMER_SHORT ?></div>
 
 <script src="/assets/js/main.js"></script>
 </body>

@@ -20,6 +20,8 @@
 </head>
 <body class="<?= isset($body_class) ? h($body_class) : '' ?>">
 
+<div class="amr-print-disc amr-print-top"><?= AMR_DISCLAIMER_SHORT ?></div>
+
 <header class="site-header" id="site-header">
   <nav class="nav-inner" style="justify-content:space-between;gap:16px;">
     <a href="/" style="display:flex;align-items:center;gap:10px;text-decoration:none;">

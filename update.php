@@ -152,6 +152,9 @@ $cur_built = $meta['built']     ?? '';
       Max file size: 50 MB. The build process may take 10–30 seconds.
     </p>
   </div>
+  <div style="font-size:11px;line-height:1.5;color:var(--subtle);padding:4px 2px 8px;">
+    <?= AMR_DISCLAIMER_SHORT ?>
+  </div>
 </div>
 <script>
 (function(){
