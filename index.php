@@ -487,7 +487,7 @@ include __DIR__ . '/includes/header.php';
     <?php if ($amr_data_date): ?>Dataset: <?= htmlspecialchars($amr_data_date) ?> &nbsp;·&nbsp; <?php endif; ?>
     <a href="/update" style="color:var(--text-muted);text-decoration:underline;text-underline-offset:3px;">Update data</a>
     &nbsp;·&nbsp;
-    <a href="#hk-changelog" style="color:var(--text-muted);text-decoration:underline;text-underline-offset:3px;">Changelog</a>
+    <a href="/changelog" style="color:var(--text-muted);text-decoration:underline;text-underline-offset:3px;">Changelog</a>
   </p>
 </section>
 
@@ -645,46 +645,7 @@ include __DIR__ . '/includes/header.php';
     </div>
   </div>
 
-  <!-- ── Changelog (recent 4) ─────────────────────────────────── -->
-  <div class="hk-card" id="hk-changelog" style="margin-top:32px;">
-    <div class="hk-card-title">Changelog</div>
-    <div style="overflow-x:auto;">
-      <table class="hk-table" style="font-size:14px;">
-        <thead><tr>
-          <th style="width:90px;white-space:nowrap;">Version</th>
-          <th style="width:90px;white-space:nowrap;">Date</th>
-          <th style="white-space:normal;min-width:200px;">Changes</th>
-        </tr></thead>
-        <tbody>
-          <tr>
-            <td style="white-space:nowrap;"><strong style="color:var(--accent);">v0.9 Beta</strong></td>
-            <td style="color:var(--text-muted);white-space:nowrap;">May 2026</td>
-            <td style="white-space:normal;">Sidebar layout with accordions — filters moved to a persistent left panel (Vehicle, Condition, Odometer, Documentation, Location).</td>
-          </tr>
-          <tr>
-            <td style="white-space:nowrap;"><strong>v0.8 Beta</strong></td>
-            <td style="color:var(--text-muted);white-space:nowrap;">May 2026</td>
-            <td style="white-space:normal;">Model normalization (2,029 → 1,914 canonical models). Multi-select model picker. Raw sales data table. Trim threshold fix.</td>
-          </tr>
-          <tr>
-            <td style="white-space:nowrap;"><strong>v0.7 Beta</strong></td>
-            <td style="color:var(--text-muted);white-space:nowrap;">May 2026</td>
-            <td style="white-space:normal;">Data date shown in header. Weekly CSV upload tool added for admins. Changelog added.</td>
-          </tr>
-          <tr>
-            <td style="white-space:nowrap;"><strong>v0.6 Beta</strong></td>
-            <td style="color:var(--text-muted);white-space:nowrap;">May 2026</td>
-            <td style="white-space:normal;">Make name normalization — ~95 raw variants collapsed to 183 canonical names. Full 18-month dataset loaded (83,074 records). Test data removed.</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-    <p style="margin-top:14px;font-size:14px;">
-      <a href="/changelog" style="color:var(--text-muted);text-decoration:underline;text-underline-offset:3px;">View all 9 versions &rarr;</a>
-    </p>
-  </div>
-
-  <p class="hk-credit">Autura Marketplace Report &nbsp;·&nbsp; Heckle v0.9 Beta</p>
+  <p class="hk-credit">Autura Marketplace Report &nbsp;·&nbsp; Beta</p>
 
   </div><!-- /.hk-content -->
 </div><!-- /.hk-layout -->

@@ -2,6 +2,7 @@
 require_once __DIR__ . '/includes/auth.php';
 
 $ENTRIES = [
+    ['v1.12 Beta', 'June 8, 2026', 'Manual Log out added to the header and every page. Removed the outdated hard-coded changelog from the home page — version history now lives only at /changelog.'],
     ['v1.11 Beta', 'June 8, 2026', 'Access & session controls. Automatic sign-out after 30 minutes of inactivity. The access log (/access-log) now records the disclaimer acknowledgment and device for each login, and login regenerates the session id. Printouts carry a faint diagonal CONFIDENTIAL watermark on every page plus a "Prepared for <email> · date/time" attribution line so any exported PDF is traceable.'],
     ['v1.10 Beta', 'June 8, 2026', 'Site-wide confidentiality disclaimer: acknowledged via a required checkbox at sign-in, shown on every page footer, and printed at the top and bottom of every PDF. Covers not-financial-advice, private/internal-only data, subject-to-change, and no-warranty terms.'],
     ['v1.9 Beta', 'June 8, 2026', 'Region + Seller filters on the Market Report — searchable multi-selects. Pick multiple regions and/or sellers and the whole report recomputes for that pooled set, with KPI deltas shown vs the national average and a Selection-vs-National comparison card. 60-day comparison windows now anchor on the last complete month (a partial trailing month is excluded) so current volume is not understated; explicit month ranges shown on each KPI card plus a period legend (current / prior / same period last year). Seller Name captured in the data build; JSON build hardened against malformed UTF-8.'],
@@ -62,7 +63,10 @@ $ENTRIES = [
 <div class="wrap">
   <div class="top-bar">
     <a class="back" href="/">&larr; Back to AMR</a>
-    <button class="theme-btn" id="theme-btn" aria-label="Toggle theme">🌙</button>
+    <span style="display:flex;align-items:center;gap:12px;">
+      <a href="/logout" style="font-size:12px;font-weight:600;color:var(--muted);text-decoration:none;">Log out</a>
+      <button class="theme-btn" id="theme-btn" aria-label="Toggle theme">🌙</button>
+    </span>
   </div>
   <h1>AMR Changelog</h1>
   <p class="sub">Autura Marketplace Report &nbsp;·&nbsp; All <?= count($ENTRIES) ?> versions</p>

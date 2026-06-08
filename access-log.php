@@ -42,7 +42,10 @@ $log = file_exists($log_file) ? (json_decode(file_get_contents($log_file), true)
 <div class="wrap">
   <div class="top-bar">
     <a class="back" href="/">&larr; Back to AMR</a>
-    <button class="theme-btn" id="theme-btn" aria-label="Toggle theme">🌙</button>
+    <span style="display:flex;align-items:center;gap:12px;">
+      <a href="/logout" style="font-size:12px;font-weight:600;color:var(--muted);text-decoration:none;">Log out</a>
+      <button class="theme-btn" id="theme-btn" aria-label="Toggle theme">🌙</button>
+    </span>
   </div>
   <h1>Access Log</h1>
   <p class="sub"><?= count($log) ?> login<?= count($log) !== 1 ? 's' : '' ?> recorded &nbsp;&middot;&nbsp; Newest first</p>

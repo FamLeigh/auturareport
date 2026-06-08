@@ -9,6 +9,18 @@ if (session_status() === PHP_SESSION_NONE) {
 
 $_auth_error = '';
 
+// ── Logout ────────────────────────────────────────────────────────────────────
+if (isset($_GET['logout'])) {
+    $_SESSION = [];
+    if (ini_get('session.use_cookies')) {
+        $cp = session_get_cookie_params();
+        setcookie(session_name(), '', time() - 42000, $cp['path'], $cp['domain'], $cp['secure'], $cp['httponly']);
+    }
+    session_destroy();
+    header('Location: /');
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['heckle_pass'])) {
     $email = strtolower(trim($_POST['heckle_email'] ?? ''));
     $pass  = $_POST['heckle_pass'] ?? '';

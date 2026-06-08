@@ -23,6 +23,7 @@ RewriteCond %{REQUEST_FILENAME} -f
 RewriteRule ^ - [L]
 
 # Clean URL routing
+RewriteRule ^logout/?$ /index.php?logout=1 [L]
 RewriteRule ^update/?$ /update.php [L,QSA]
 RewriteRule ^changelog/?$ /changelog.php [L,QSA]
 RewriteRule ^access-log/?$ /access-log.php [L,QSA]
