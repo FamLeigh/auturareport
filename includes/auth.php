@@ -1,7 +1,11 @@
 <?php
 require_once __DIR__ . '/config.php';
 
-if (session_status() === PHP_SESSION_NONE) session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    // Keep server-side session data alive at least as long as our idle window.
+    ini_set('session.gc_maxlifetime', (string) AMR_IDLE_TIMEOUT);
+    session_start();
+}
 
 $_auth_error = '';
 
@@ -18,25 +22,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['heckle_pass'])) {
     } elseif (empty($_POST['agree'])) {
         $_auth_error = 'Please read and acknowledge the disclaimer to continue.';
     } else {
+        session_regenerate_id(true); // new session id on login (fixation defense)
         $_SESSION['amr_auth']  = true;
         $_SESSION['amr_email'] = $email;
-        _amr_log($email);
+        $_SESSION['amr_last']  = time();
+        _amr_log($email, true);
         header('Location: ' . strtok($_SERVER['REQUEST_URI'], '?'));
         exit;
     }
 }
 
-function _amr_log(string $email): void {
+function _amr_log(string $email, bool $agreed = false): void {
     $raw = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? '';
     $ip  = trim(explode(',', $raw)[0]);
+    $ua  = substr(trim($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 200);
     $log_file = __DIR__ . '/../data/access-log.json';
-    $entry = ['time' => date('Y-m-d H:i:s'), 'email' => $email, 'ip' => $ip];
+    $entry = ['time' => date('Y-m-d H:i:s'), 'email' => $email, 'ip' => $ip, 'agreed' => $agreed, 'agent' => $ua];
     $fp = fopen($log_file, 'c+');
     if (!$fp) return;
     if (flock($fp, LOCK_EX)) {
         $size = fstat($fp)['size'] ?? 0;
         $log  = $size > 0 ? (json_decode(fread($fp, $size), true) ?? []) : [];
         array_unshift($log, $entry);
+        if (count($log) > 5000) $log = array_slice($log, 0, 5000); // cap growth
         ftruncate($fp, 0); rewind($fp);
         fwrite($fp, json_encode($log, JSON_PRETTY_PRINT));
         flock($fp, LOCK_UN);
@@ -44,7 +52,22 @@ function _amr_log(string $email): void {
     fclose($fp);
 }
 
-if (!empty($_SESSION['amr_auth'])) return;
+// ── Idle timeout: sign out after AMR_IDLE_TIMEOUT seconds of inactivity ────────
+if (!empty($_SESSION['amr_auth'])) {
+    if (isset($_SESSION['amr_last']) && (time() - $_SESSION['amr_last']) > AMR_IDLE_TIMEOUT) {
+        $_SESSION = [];
+        if (ini_get('session.use_cookies')) {
+            $cp = session_get_cookie_params();
+            setcookie(session_name(), '', time() - 42000, $cp['path'], $cp['domain'], $cp['secure'], $cp['httponly']);
+        }
+        session_destroy();
+        session_start();
+        $_auth_error = 'Your session timed out after inactivity. Please sign in again.';
+    } else {
+        $_SESSION['amr_last'] = time(); // activity → extend the window
+        return;
+    }
+}
 
 // ── Gate page ────────────────────────────────────────────────────────────────
 ?><!DOCTYPE html>

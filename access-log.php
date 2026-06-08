@@ -34,6 +34,7 @@ $log = file_exists($log_file) ? (json_decode(file_get_contents($log_file), true)
   .email-cell { font-weight: 500; }
   .ip-cell { font-family: monospace; font-size: 13px; color: var(--muted); }
   .time-cell { color: var(--muted); font-size: 13px; }
+  .ack-cell { font-size: 12px; color: #2e8a4c; font-weight: 600; }
   .empty { padding: 48px 20px; text-align: center; color: var(--subtle); font-size: 14px; }
 </style>
 </head>
@@ -53,17 +54,19 @@ $log = file_exists($log_file) ? (json_decode(file_get_contents($log_file), true)
           <th>Date / Time</th>
           <th>Email</th>
           <th>IP Address</th>
+          <th>Acknowledged</th>
         </tr>
       </thead>
       <tbody>
         <?php if (empty($log)): ?>
-          <tr><td colspan="3" class="empty">No logins recorded yet.</td></tr>
+          <tr><td colspan="4" class="empty">No logins recorded yet.</td></tr>
         <?php else: ?>
           <?php foreach ($log as $entry): ?>
           <tr>
             <td class="time-cell"><?= htmlspecialchars($entry['time'] ?? '') ?></td>
             <td class="email-cell"><?= htmlspecialchars($entry['email'] ?? '') ?></td>
             <td class="ip-cell"><?= htmlspecialchars($entry['ip'] ?? '') ?></td>
+            <td class="ack-cell"><?= !empty($entry['agreed']) ? '✓ Disclaimer' : '—' ?></td>
           </tr>
           <?php endforeach; ?>
         <?php endif; ?>

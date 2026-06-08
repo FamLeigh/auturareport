@@ -1438,6 +1438,7 @@ p { color: var(--text); }
 }
 .amr-disclaimer li::before { content: "•"; position: absolute; left: 0; color: var(--accent); }
 .amr-print-disc { display: none; }
+.amr-watermark { display: none; }
 
 @media print {
   .amr-disclaimer { display: none !important; }
@@ -1450,6 +1451,15 @@ p { color: var(--text); }
   }
   .amr-print-top    { margin: 0 0 12pt; }
   .amr-print-bottom { margin: 14pt 0 0; }
+  .amr-print-prep   { display: block; margin-top: 3pt; font-weight: 400; font-size: 7.5pt; color: #444; }
+  /* Repeating diagonal CONFIDENTIAL watermark on every printed page */
+  .amr-watermark {
+    display: block !important;
+    position: fixed; top: 42%; left: 0; right: 0; z-index: 9999;
+    text-align: center; font-size: 92pt; font-weight: 800; letter-spacing: .12em;
+    color: rgba(0,0,0,.07) !important; transform: rotate(-28deg);
+    pointer-events: none; -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
 }
 
 /* ─── Pagination ─────────────────────────────────────────────────────────────── */

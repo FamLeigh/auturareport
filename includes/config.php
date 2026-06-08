@@ -12,6 +12,9 @@ define('SITE_TAGLINE', 'Vehicle valuation data from Autura marketplace sales.');
 define('SITE_URL',     $_is_local ? 'https://auturareport:8890' : 'https://auturareport.com');
 define('CONTACT_EMAIL', 'kleigh@autura.com');
 
+// Auto sign-out after this many seconds of inactivity.
+define('AMR_IDLE_TIMEOUT', 30 * 60); // 30 minutes
+
 // ── Disclaimer (single source of truth, used on every page + sign-in + print) ──
 define('AMR_DISCLAIMER_POINTS', [
     'For internal informational purposes only — <strong>not financial, investment, or appraisal advice</strong>. Autura is not a financial advisor.',

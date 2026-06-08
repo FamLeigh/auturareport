@@ -20,7 +20,11 @@
 </head>
 <body class="<?= isset($body_class) ? h($body_class) : '' ?>">
 
-<div class="amr-print-disc amr-print-top"><?= AMR_DISCLAIMER_SHORT ?></div>
+<div class="amr-watermark" aria-hidden="true">CONFIDENTIAL</div>
+<div class="amr-print-disc amr-print-top">
+  <?= AMR_DISCLAIMER_SHORT ?>
+  <?php if (!empty($_SESSION['amr_email'])): ?><span class="amr-print-prep">Prepared for <?= htmlspecialchars($_SESSION['amr_email']) ?> &middot; <?= date('M j, Y g:i A T') ?></span><?php endif; ?>
+</div>
 
 <header class="site-header" id="site-header">
   <nav class="nav-inner" style="justify-content:space-between;gap:16px;">

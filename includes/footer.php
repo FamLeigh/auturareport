@@ -15,7 +15,10 @@
   </div>
 </footer>
 
-<div class="amr-print-disc amr-print-bottom"><?= AMR_DISCLAIMER_SHORT ?></div>
+<div class="amr-print-disc amr-print-bottom">
+  <?= AMR_DISCLAIMER_SHORT ?>
+  <?php if (!empty($_SESSION['amr_email'])): ?><span class="amr-print-prep">Prepared for <?= htmlspecialchars($_SESSION['amr_email']) ?> &middot; <?= date('M j, Y g:i A T') ?></span><?php endif; ?>
+</div>
 
 <script src="/assets/js/main.js"></script>
 </body>
