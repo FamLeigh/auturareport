@@ -41,6 +41,7 @@
           $nav_links = [
             '/'                    => 'Valuation',
             '/autura-market-report'=> 'Market Report',
+            '/customer-results'    => 'Customer Results',
             '/changelog'           => 'Changelog',
             '/update'              => 'Update Data',
           ];
