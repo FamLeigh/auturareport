@@ -42,6 +42,7 @@
             '/'                    => 'Valuation',
             '/autura-market-report'=> 'Market Report',
             '/customer-results'    => 'Customer Results',
+            '/activity-90'         => '90-Day Activity',
             '/changelog'           => 'Changelog',
             '/update'              => 'Update Data',
           ];

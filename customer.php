@@ -1,119 +1,20 @@
 <?php
 require_once __DIR__ . '/includes/auth.php';        // require Autura login (like the rest of the site)
 require_once __DIR__ . '/includes/functions.php';
+require_once __DIR__ . '/includes/customer_data.php';
 
-// ── Secondary 4-digit access code for this report ─────────────────────────────
-const CR_ACCESS_CODE = '2862';
-$cr_error = '';
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cr_code'])) {
-    if (preg_replace('/\D/', '', $_POST['cr_code']) === CR_ACCESS_CODE) {
-        $_SESSION['cr_auth'] = true;
-        header('Location: /customer-results');
-        exit;
-    }
-    $cr_error = 'Incorrect code. Please try again.';
-}
-$cr_ok = !empty($_SESSION['cr_auth']);
+// ── Secondary 4-digit access code, then server-side aggregation ───────────────
+list($cr_ok, $cr_error) = amr_customer_gate();
+
+$amr_meta      = file_exists(__DIR__ . '/data/amr-meta.json') ? json_decode(file_get_contents(__DIR__ . '/data/amr-meta.json'), true) : [];
+$amr_data_date = $amr_meta['data_date'] ?? '';
+$cr_payload    = $cr_ok ? amr_customer_payload() : '{"months":[],"customers":[],"dataDate":""}';
 
 $page_title = 'Customer Results';
 $meta_desc  = 'Customer Results — first auction, sold by month, and potential churn.';
 $body_class = 'page-customer';
 $canonical  = '/customer-results';
-
-// ── Server-side aggregation (only once the code is accepted) ──────────────────
-$amr_meta      = file_exists(__DIR__ . '/data/amr-meta.json') ? json_decode(file_get_contents(__DIR__ . '/data/amr-meta.json'), true) : [];
-$amr_data_date = $amr_meta['data_date'] ?? '';
-$cr_payload    = '{"months":[],"customers":[],"dataDate":""}';
-
-if ($cr_ok) {
-    $data = file_exists(__DIR__ . '/data/amr-data.json') ? json_decode(file_get_contents(__DIR__ . '/data/amr-data.json'), true) : null;
-    if ($data && !empty($data['records'])) {
-        $S = $data['sellers'] ?? [];
-        $M = $data['months']  ?? [];
-        $agg = [];                                  // sellerIdx => [monthStr => count]
-        $monthSet = [];
-        foreach ($data['records'] as $r) {
-            $si = $r[9] ?? -1; $mi = $r[8] ?? -1;
-            if ($si < 0 || $mi < 0) continue;
-            $m = $M[$mi];
-            $agg[$si][$m] = ($agg[$si][$m] ?? 0) + 1;
-            $monthSet[$m] = true;
-        }
-        $months = array_keys($monthSet);
-        sort($months);
-
-        $customers = [];
-        foreach ($agg as $si => $counts) {
-            ksort($counts);
-            $active = array_keys($counts);
-            $customers[] = [
-                'name'   => (string) ($S[$si] ?? 'Unknown'),
-                'first'  => $active[0],
-                'last'   => end($active),
-                'total'  => array_sum($counts),
-                'active' => count($counts),
-                'counts' => $counts,
-            ];
-        }
-        $cr_payload = json_encode(
-            ['months' => $months, 'customers' => $customers, 'dataDate' => $amr_data_date],
-            JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE
-        ) ?: '{"months":[],"customers":[],"dataDate":""}';
-    }
-}
-
-$extra_head = '<meta name="robots" content="noindex, nofollow">
-<style>
-.cr-hero { padding: 64px 0 20px; }
-.cr-hero h1 { font-size: clamp(1.7rem,4vw,2.4rem); margin-bottom: 6px; }
-.cr-sub { font-size: 13px; color: var(--text-muted); }
-
-/* code gate */
-.cr-gate { max-width: 380px; margin: 40px auto 80px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 32px 30px; text-align: center; }
-.cr-gate h2 { font-size: 1.05rem; margin-bottom: 6px; }
-.cr-gate p { font-size: 13px; color: var(--text-muted); margin-bottom: 22px; }
-.cr-code-input { width: 100%; text-align: center; letter-spacing: .5em; font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; color: var(--text); padding: 14px; margin-bottom: 16px; }
-.cr-code-input:focus { outline: none; border-color: var(--accent); }
-.cr-gate button { width: 100%; background: var(--accent); border: none; border-radius: 8px; color: #000; font-size: 14px; font-weight: 700; padding: 13px; cursor: pointer; }
-.cr-gate button:hover { opacity: .88; }
-.cr-gate .err { font-size: 13px; color: #c0392b; background: rgba(192,57,43,.08); border: 1px solid rgba(192,57,43,.2); border-radius: 8px; padding: 10px 14px; margin-bottom: 18px; }
-
-/* tabs */
-.cr-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin: 22px 0 0; flex-wrap: wrap; }
-.cr-tab { background: none; border: none; border-bottom: 2px solid transparent; color: var(--text-muted); font-size: 13px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 11px 16px; cursor: pointer; margin-bottom: -1px; white-space: nowrap; }
-.cr-tab:hover { color: var(--text); }
-.cr-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-
-.cr-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 18px 0 12px; flex-wrap: wrap; }
-.cr-count { font-size: 13px; color: var(--text-muted); }
-.cr-search { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 13px; padding: 8px 12px; min-width: 240px; }
-.cr-search:focus { outline: none; border-color: var(--accent); }
-
-.cr-panel { display: none; }
-.cr-panel.active { display: block; }
-
-/* tables */
-.cr-scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); }
-.cr-tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
-.cr-tbl th { position: sticky; top: 0; background: var(--surface); font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); padding: 12px 14px; text-align: right; border-bottom: 1px solid var(--border); white-space: nowrap; }
-.cr-tbl th:first-child { text-align: left; }
-.cr-tbl td { padding: 9px 14px; border-bottom: 1px solid rgba(0,0,0,.05); text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-[data-theme="dark"] .cr-tbl td { border-bottom-color: rgba(255,255,255,.05); }
-.cr-tbl td:first-child { text-align: left; font-weight: 500; position: sticky; left: 0; background: var(--surface); }
-.cr-tbl tr:hover td { background: var(--surface-2); }
-.cr-tbl tr:hover td:first-child { background: var(--surface-2); }
-.cr-tbl .muted { color: var(--text-muted); }
-.cr-tbl .zero { color: var(--border); }
-.cr-tbl tfoot td { font-weight: 700; border-top: 2px solid var(--border); border-bottom: none; background: var(--surface-2); }
-.cr-tbl tfoot td:first-child { background: var(--surface-2); }
-
-.cr-badge { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
-.cr-badge.warn { background: rgba(240,165,0,.14); color: var(--accent); }
-.cr-badge.bad  { background: rgba(192,57,43,.12); color: #c0392b; }
-[data-theme="dark"] .cr-badge.bad { color: #e05a5a; }
-
-.cr-empty { padding: 40px; text-align: center; color: var(--text-muted); font-size: 14px; }
-</style>';
+$extra_head = '<meta name="robots" content="noindex, nofollow">';
 
 include __DIR__ . '/includes/header.php';
 ?>
