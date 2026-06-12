@@ -2,6 +2,7 @@
 require_once __DIR__ . '/includes/auth.php';
 
 $ENTRIES = [
+    ['v1.15 Beta', 'June 12, 2026', 'Moved 90-Day Activity into the Customer Results report as a tab (alongside First Action, Sold by Month, and Potential Churn). Removed the separate nav item; the old /activity-90 link redirects to Customer Results.'],
     ['v1.14 Beta', 'June 10, 2026', 'New 90-Day Activity report at /activity-90 (behind login + the 4-digit code). Lists customers who first ran on/after Jul 1, 2025 and how many cars they sold in their first three months — per-month ramp (Month 1/2/3) plus a first-90-day total, with cohort totals and an "in progress" flag for customers whose window has not fully elapsed. Searchable by customer.'],
     ['v1.13 Beta', 'June 8, 2026', 'New Customer Results report at /customer-results (behind login plus a 4-digit access code). Three views of seller activity: First Action (each customer\'s first auction month), Sold by Month (customer × month grid of cars sold with monthly totals), and Potential Churn (no auctions in 90+ days, measured from the data date, most-lapsed first). Filter by start quarter — pick the quarter a customer first ran (e.g. Q3 2025) to see that cohort with monthly columns from the quarter forward. Searchable by customer.'],
     ['v1.12 Beta', 'June 8, 2026', 'Manual Log out added to the header and every page. Removed the outdated hard-coded changelog from the home page — version history now lives only at /changelog.'],

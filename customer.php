@@ -27,7 +27,7 @@ include __DIR__ . '/includes/header.php';
     <h1>Customer Results</h1>
     <p class="cr-sub">
       <?php if ($amr_data_date): ?>Dataset: <strong><?= h($amr_data_date) ?></strong> &nbsp;&middot;&nbsp; <?php endif; ?>
-      Seller-level activity: first auction, sold by month, and potential churn.
+      Seller-level activity: first auction, sold by month, 90-day activity, and potential churn.
     </p>
   </section>
 
@@ -47,6 +47,7 @@ include __DIR__ . '/includes/header.php';
   <div class="cr-tabs">
     <button class="cr-tab active" data-tab="first">First Action</button>
     <button class="cr-tab" data-tab="sold">Sold by Month</button>
+    <button class="cr-tab" data-tab="ninety">90-Day Activity</button>
     <button class="cr-tab" data-tab="churn">Potential Churn</button>
   </div>
 
@@ -60,6 +61,7 @@ include __DIR__ . '/includes/header.php';
 
   <div class="cr-panel active" id="cr-panel-first"></div>
   <div class="cr-panel" id="cr-panel-sold"></div>
+  <div class="cr-panel" id="cr-panel-ninety"></div>
   <div class="cr-panel" id="cr-panel-churn"></div>
 
 <?php endif; ?>
@@ -74,6 +76,7 @@ const fmtN = n => Number(n||0).toLocaleString();
 const esc  = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const monIdx = ym => { const [y,m] = ym.split('-').map(Number); return y*12 + (m-1); };
 const monDiff = (a,b) => monIdx(a) - monIdx(b);
+const addM = (ym,n) => { let [y,m] = ym.split('-').map(Number); m += n; while(m>12){m-=12;y++;} while(m<=0){m+=12;y--;} return `${y}-${String(m).padStart(2,'0')}`; };
 
 const MONTHS  = CR.months;
 const LATEST  = MONTHS[MONTHS.length - 1] || '';
@@ -173,12 +176,53 @@ function renderChurn() {
   return churned.length;
 }
 
+// ── 90-Day Activity (new customers since Jul 1 2025; sales in first 3 months) ──
+const NINETY_START = '2025-07';
+function renderNinety() {
+  const cohort = CR.customers
+    .filter(c => c.first >= NINETY_START && (!term || c.name.toLowerCase().includes(term)))
+    .map(c => {
+      const m1 = c.first, m2 = addM(c.first,1), m3 = addM(c.first,2);
+      const v1 = c.counts[m1]||0, v2 = c.counts[m2]||0, v3 = c.counts[m3]||0;
+      const observed = [m1,m2,m3].filter(m => m <= LATEST).length;
+      return { ...c, v1, v2, v3, t90: v1+v2+v3, observed };
+    })
+    .sort((a,b) => b.t90 - a.t90 || a.first.localeCompare(b.first));
+  let anyInc = false;
+  const body = cohort.map(c => {
+    const inc = c.observed < 3; if (inc) anyInc = true;
+    return `<tr>
+      <td>${esc(c.name)}${inc ? ' <span class="cr-badge warn" title="First-90-day window not fully elapsed yet">in progress</span>' : ''}</td>
+      <td>${mlbl(c.first)}</td>
+      <td>${fmtN(c.v1)}</td>
+      <td>${c.observed >= 2 ? fmtN(c.v2) : '·'}</td>
+      <td>${c.observed >= 3 ? fmtN(c.v3) : '·'}</td>
+      <td><strong>${fmtN(c.t90)}</strong></td>
+    </tr>`;
+  }).join('');
+  const tot = cohort.reduce((a,c) => { a.v1+=c.v1; a.v2+=c.v2; a.v3+=c.v3; a.t+=c.t90; return a; }, {v1:0,v2:0,v3:0,t:0});
+  const foot = cohort.length ? `<tfoot><tr><td>All shown</td><td></td><td>${fmtN(tot.v1)}</td><td>${fmtN(tot.v2)}</td><td>${fmtN(tot.v3)}</td><td>${fmtN(tot.t)}</td></tr></tfoot>` : '';
+  document.getElementById('cr-panel-ninety').innerHTML = `
+    <p class="cr-sub" style="margin:0 0 12px;">New customers who first ran on/after <strong>${mlbl(NINETY_START)}</strong> — cars sold in their first three months.</p>
+    <div class="cr-scroll"><table class="cr-tbl">
+      <thead><tr><th>Customer</th><th>First Auction</th><th>Month 1</th><th>Month 2</th><th>Month 3</th><th>First 90 Days</th></tr></thead>
+      <tbody>${body || `<tr><td colspan="6" class="cr-empty">No customers started on/after ${mlbl(NINETY_START)}${term?' for this search':''}.</td></tr>`}</tbody>
+      ${foot}
+    </table></div>
+    ${anyInc ? `<p class="cr-sub" style="margin-top:10px;">“In progress” = the first-90-day window hasn’t fully elapsed (extends past ${esc(CR.dataDate || mlbl(LATEST))}); Month 2 / Month 3 show “·” where there’s no data yet.</p>` : ''}`;
+  return cohort.length;
+}
+
 function render() {
+  // The start-quarter filter only applies to First Action / Sold by Month / Churn.
+  const qSel = document.getElementById('cr-quarter');
+  if (qSel) qSel.style.display = (activeTab === 'ninety') ? 'none' : '';
   let n = 0;
   if (activeTab === 'first') n = renderFirst();
   else if (activeTab === 'sold') n = renderSold();
+  else if (activeTab === 'ninety') n = renderNinety();
   else n = renderChurn();
-  const noun = activeTab === 'churn' ? 'at-risk customer' : 'customer';
+  const noun = activeTab === 'churn' ? 'at-risk customer' : (activeTab === 'ninety' ? 'new customer' : 'customer');
   document.getElementById('cr-count').textContent = `${fmtN(n)} ${noun}${n===1?'':'s'}`;
 }
 
