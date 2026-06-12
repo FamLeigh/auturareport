@@ -16,6 +16,7 @@ RewriteRule ^data/amr-meta\.json$ - [F,L]
 RewriteRule ^data/amr-data\.json$ - [F,L]
 RewriteRule ^data-json/?$ /data-json.php [L,QSA]
 RewriteRule ^data/access-log\.json$ - [F,L]
+RewriteRule ^data/users\.json$ - [F,L]
 RewriteRule ^build-amr-data\.php$ - [F,L]
 
 # Static assets pass through

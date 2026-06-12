@@ -21,6 +21,41 @@ if (isset($_GET['logout'])) {
     exit;
 }
 
+$users_file = __DIR__ . '/../data/users.json';
+
+function _amr_users(string $file): array {
+    return is_readable($file) ? (json_decode(file_get_contents($file), true) ?: []) : [];
+}
+function _amr_set_password(string $file, string $email, string $pass): void {
+    $fp = fopen($file, 'c+');
+    if (!$fp) return;
+    if (flock($fp, LOCK_EX)) {
+        $size  = fstat($fp)['size'] ?? 0;
+        $users = $size > 0 ? (json_decode(fread($fp, $size), true) ?: []) : [];
+        $now   = date('Y-m-d H:i:s');
+        $users[$email] = [
+            'hash'    => password_hash($pass, PASSWORD_DEFAULT),
+            'created' => $users[$email]['created'] ?? $now,
+            'updated' => $now,
+        ];
+        ftruncate($fp, 0); rewind($fp);
+        fwrite($fp, json_encode($users, JSON_PRETTY_PRINT));
+        flock($fp, LOCK_UN);
+    }
+    fclose($fp);
+}
+function _amr_grant(string $email): void {
+    session_regenerate_id(true);             // new session id on login (fixation defense)
+    $_SESSION['amr_auth']  = true;
+    $_SESSION['amr_email'] = $email;
+    $_SESSION['amr_last']  = time();
+    unset($_SESSION['pending_email']);
+    _amr_log($email, true);
+    header('Location: ' . strtok($_SERVER['REQUEST_URI'], '?'));
+    exit;
+}
+
+// ── Login attempt ─────────────────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['heckle_pass'])) {
     $email = strtolower(trim($_POST['heckle_email'] ?? ''));
     $pass  = $_POST['heckle_pass'] ?? '';
@@ -29,18 +64,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['heckle_pass'])) {
         $_auth_error = 'Enter a valid email address.';
     } elseif (!str_ends_with($email, '@autura.com')) {
         $_auth_error = 'Only @autura.com email addresses are allowed.';
-    } elseif ($pass !== 'heckle') {
-        $_auth_error = 'Incorrect password.';
     } elseif (empty($_POST['agree'])) {
         $_auth_error = 'Please read and acknowledge the disclaimer to continue.';
     } else {
-        session_regenerate_id(true); // new session id on login (fixation defense)
-        $_SESSION['amr_auth']  = true;
-        $_SESSION['amr_email'] = $email;
-        $_SESSION['amr_last']  = time();
-        _amr_log($email, true);
-        header('Location: ' . strtok($_SERVER['REQUEST_URI'], '?'));
-        exit;
+        $u = _amr_users($users_file)[$email] ?? null;
+        if ($u && !empty($u['hash'])) {
+            if (password_verify($pass, $u['hash'])) _amr_grant($email);
+            else $_auth_error = 'Incorrect password.';
+        } elseif ($pass === AMR_DEFAULT_PASSWORD) {
+            // First time for this user → force them to set a personal password.
+            $_SESSION['pending_email'] = $email;
+            header('Location: ' . strtok($_SERVER['REQUEST_URI'], '?'));
+            exit;
+        } else {
+            $_auth_error = 'Incorrect password.';
+        }
+    }
+}
+
+// ── Set a personal password (forced change off the default) ───────────────────
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['new_pass'])) {
+    $email = $_SESSION['pending_email'] ?? '';
+    $np = (string) $_POST['new_pass'];
+    $cp = (string) ($_POST['confirm_pass'] ?? '');
+    if (!$email) {
+        $_auth_error = 'Your session expired. Please sign in again.';
+    } elseif (strlen($np) < AMR_MIN_PASSWORD_LEN) {
+        $_auth_error = 'Password must be at least ' . AMR_MIN_PASSWORD_LEN . ' characters.';
+    } elseif (strtolower($np) === strtolower(AMR_DEFAULT_PASSWORD)) {
+        $_auth_error = 'Choose a password other than the default.';
+    } elseif ($np !== $cp) {
+        $_auth_error = 'Passwords do not match.';
+    } else {
+        _amr_set_password($users_file, $email, $np);
+        _amr_grant($email);
     }
 }
 
@@ -118,8 +175,30 @@ if (!empty($_SESSION['amr_auth'])) {
     <svg width="28" height="28" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="6" fill="#f0a500"/><path d="M8 22L16 10L24 22H19L16 17L13 22H8Z" fill="#000" opacity=".85"/></svg>
     <span>Autura Marketplace Report</span>
   </div>
+<?php if (!empty($_SESSION['pending_email'])): ?>
+
+  <h1>Set your password</h1>
+  <p class="gate-sub">First time signing in — replace the shared access password with your own. You'll use it to sign in from now on.<br><strong style="color:#111110;"><?= htmlspecialchars($_SESSION['pending_email']) ?></strong></p>
+  <?php if ($_auth_error): ?>
+    <div class="err"><?= htmlspecialchars($_auth_error) ?></div>
+  <?php endif; ?>
+  <form method="POST" novalidate>
+    <div class="field">
+      <label>New password</label>
+      <input type="password" name="new_pass" minlength="<?= AMR_MIN_PASSWORD_LEN ?>" placeholder="At least <?= AMR_MIN_PASSWORD_LEN ?> characters" autofocus required>
+    </div>
+    <div class="field">
+      <label>Confirm password</label>
+      <input type="password" name="confirm_pass" placeholder="Re-enter your new password" required>
+    </div>
+    <button type="submit">Set password &amp; continue</button>
+  </form>
+  <p style="text-align:center;margin-top:14px;font-size:12px;"><a href="/?logout=1" style="color:#999;">Use a different email</a></p>
+
+<?php else: ?>
+
   <h1>Sign in to continue</h1>
-  <p class="gate-sub">Use your Autura email and the access password.</p>
+  <p class="gate-sub">Use your Autura email and password. First time? Enter the shared access password and you'll set your own.</p>
   <?php if ($_auth_error): ?>
     <div class="err"><?= htmlspecialchars($_auth_error) ?></div>
   <?php endif; ?>
@@ -131,7 +210,7 @@ if (!empty($_SESSION['amr_auth'])) {
     </div>
     <div class="field">
       <label>Password</label>
-      <input type="password" name="heckle_pass" placeholder="Access password">
+      <input type="password" name="heckle_pass" placeholder="Your password">
     </div>
     <div class="disc">
       <div class="disc-title">Please read &amp; acknowledge</div>
@@ -145,6 +224,8 @@ if (!empty($_SESSION['amr_auth'])) {
     </label>
     <button type="submit">Enter</button>
   </form>
+
+<?php endif; ?>
 </div>
 </body>
 </html>
