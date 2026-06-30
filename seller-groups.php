@@ -83,7 +83,11 @@ $extra_head = '<meta name="robots" content="noindex, nofollow">
 .sg-gitem:hover { background:var(--surface-2); }
 .sg-gitem.on { border-color:var(--accent); background:var(--accent-glow); }
 .sg-gitem .nm { flex:1; font-weight:600; font-size:14px; }
-.sg-gitem .ct { font-size:11px; color:var(--text-muted); }
+.sg-gitem .ct { font-size:11px; color:var(--text-muted); white-space:nowrap; }
+.sg-gitem .ct b { color:var(--text); }
+.sg-sort { display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-muted); margin-bottom:10px; }
+.sg-sortb { background:none; border:1px solid var(--border); border-radius:6px; color:var(--text-muted); font-size:11px; padding:3px 9px; cursor:pointer; }
+.sg-sortb.on { border-color:var(--accent); color:var(--accent); }
 .sg-gitem .del { background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:15px; line-height:1; padding:2px 4px; }
 .sg-gitem .del:hover { color:#c0392b; }
 .sg-empty { color:var(--text-muted); font-size:13px; padding:18px; text-align:center; }
@@ -119,7 +123,10 @@ include __DIR__ . '/includes/header.php';
   </div>
 
   <div class="sg-grid">
-    <div class="sg-card"><div class="sg-glist" id="sg-groups"></div></div>
+    <div class="sg-card">
+      <div class="sg-sort"><span>Sort:</span><button class="sg-sortb on" data-sort="name">Name</button><button class="sg-sortb" data-sort="sold">Number sold</button></div>
+      <div class="sg-glist" id="sg-groups"></div>
+    </div>
     <div class="sg-card" id="sg-editor"></div>
   </div>
 </div>
@@ -131,17 +138,26 @@ let selected = Object.keys(GROUPS)[0] || null;
 let dirty = false;
 let term = '';
 let editingName = false;
+let groupSort = 'name';   // 'name' | 'sold'
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fmtN = n => Number(n||0).toLocaleString();
+// Cars sold per seller → a group's "number sold" is the sum across its members.
+const SELLER_CT = {}; SELLERS.forEach(s => { SELLER_CT[s.name] = s.count; });
+const groupSold = n => (GROUPS[n] || []).reduce((a, m) => a + (SELLER_CT[m] || 0), 0);
 
 function setDirty(v){ dirty = v; const b=document.getElementById('sg-save'); b.disabled=!v; document.getElementById('sg-status').textContent = v ? 'Unsaved changes' : ''; }
 
 function renderGroups(){
-  const names = Object.keys(GROUPS).sort((a,b)=>a.localeCompare(b));
+  const names = Object.keys(GROUPS).sort(
+    groupSort === 'sold'
+      ? (a,b) => groupSold(b) - groupSold(a) || a.localeCompare(b)
+      : (a,b) => a.localeCompare(b)
+  );
   const el = document.getElementById('sg-groups');
   el.innerHTML = names.length ? names.map(n => `
     <div class="sg-gitem ${n===selected?'on':''}" data-group="${esc(n)}">
-      <span class="nm">${esc(n)}</span><span class="ct">${fmtN(GROUPS[n].length)}</span>
+      <span class="nm">${esc(n)}</span>
+      <span class="ct">${fmtN(GROUPS[n].length)} seller${GROUPS[n].length===1?'':'s'} · <b>${fmtN(groupSold(n))}</b> sold</span>
       <button class="del" data-del="${esc(n)}" title="Delete group">&times;</button>
     </div>`).join('') : `<div class="sg-empty">No groups yet — create one above.</div>`;
 }
@@ -150,17 +166,13 @@ function renderEditor(){
   const ed = document.getElementById('sg-editor');
   if (!selected || !GROUPS[selected]) { ed.innerHTML = `<div class="sg-empty">Select or create a group to choose its sellers.</div>`; return; }
   const members = new Set(GROUPS[selected]);
-  const ft = term.trim().toLowerCase();
-  const rows = SELLERS.filter(s => !ft || s.name.toLowerCase().includes(ft)).map(s =>
-    `<label class="sg-sopt"><input type="checkbox" data-seller="${esc(s.name)}" ${members.has(s.name)?'checked':''}><span>${esc(s.name)}</span><span class="sc">${fmtN(s.count)}</span></label>`
-  ).join('');
   const headHTML = editingName
     ? `<div class="sg-ed-head" style="gap:8px"><input class="sg-search" id="sg-rename" style="margin:0;flex:1;min-width:200px" maxlength="60" value="${esc(selected)}"><button class="sg-btn" id="sg-rename-save">Save name</button><button class="sg-btn ghost" id="sg-rename-cancel">Cancel</button></div>`
     : `<div class="sg-ed-head"><div style="display:flex;align-items:center;gap:10px"><h3>${esc(selected)}</h3><button class="sg-btn ghost" id="sg-rename-btn" style="padding:5px 11px;font-size:12px">Rename</button></div><span class="cr-sub" style="font-size:12px;color:var(--text-muted)">${fmtN(members.size)} of ${fmtN(SELLERS.length)} sellers</span></div>`;
   ed.innerHTML = headHTML + `
     <div class="sg-tools"><button id="sg-all">Select all shown</button><button id="sg-none">Clear all</button></div>
     <input class="sg-search" id="sg-search" type="text" placeholder="Search sellers…" value="${esc(term)}">
-    <div class="sg-sellers">${rows || '<div class="sg-empty">No sellers match.</div>'}</div>`;
+    <div class="sg-sellers" id="sg-sellers"></div>`;
   if (editingName) {
     const ri = document.getElementById('sg-rename'); ri.focus(); ri.select();
     ri.addEventListener('keydown', e => { if (e.key==='Enter') { e.preventDefault(); commitRename(); } else if (e.key==='Escape') { editingName=false; renderEditor(); } });
@@ -169,9 +181,23 @@ function renderEditor(){
   } else {
     document.getElementById('sg-rename-btn').addEventListener('click', () => { editingName=true; renderEditor(); });
   }
-  const s = document.getElementById('sg-search'); s.addEventListener('input', e => { term = e.target.value; renderEditor(); });
-  document.getElementById('sg-all').addEventListener('click', () => { const ft=term.trim().toLowerCase(); SELLERS.filter(x=>!ft||x.name.toLowerCase().includes(ft)).forEach(x=>members.add(x.name)); GROUPS[selected]=[...members]; setDirty(true); renderGroups(); renderEditor(); });
-  document.getElementById('sg-none').addEventListener('click', () => { GROUPS[selected]=[]; setDirty(true); renderGroups(); renderEditor(); });
+  // Search only re-renders the seller list (not the whole panel) so the input keeps focus.
+  document.getElementById('sg-search').addEventListener('input', e => { term = e.target.value; renderSellerList(); });
+  document.getElementById('sg-all').addEventListener('click', () => { const ft=term.trim().toLowerCase(); const set=new Set(GROUPS[selected]); SELLERS.filter(x=>!ft||x.name.toLowerCase().includes(ft)).forEach(x=>set.add(x.name)); GROUPS[selected]=[...set]; setDirty(true); renderGroups(); renderSellerList(); });
+  document.getElementById('sg-none').addEventListener('click', () => { GROUPS[selected]=[]; setDirty(true); renderGroups(); renderSellerList(); });
+  renderSellerList();
+}
+
+// Fills just the seller checklist for the selected group, honoring the search term.
+function renderSellerList(){
+  const cont = document.getElementById('sg-sellers');
+  if (!cont || !selected || !GROUPS[selected]) return;
+  const members = new Set(GROUPS[selected]);
+  const ft = term.trim().toLowerCase();
+  const rows = SELLERS.filter(s => !ft || s.name.toLowerCase().includes(ft)).map(s =>
+    `<label class="sg-sopt"><input type="checkbox" data-seller="${esc(s.name)}" ${members.has(s.name)?'checked':''}><span>${esc(s.name)}</span><span class="sc">${fmtN(s.count)}</span></label>`
+  ).join('');
+  cont.innerHTML = rows || '<div class="sg-empty">No sellers match.</div>';
 }
 
 function commitRename(){
@@ -193,6 +219,12 @@ document.getElementById('sg-create').addEventListener('click', () => {
   GROUPS[name] = []; selected = name; inp.value = ''; setDirty(true); render();
 });
 document.getElementById('sg-newname').addEventListener('keydown', e => { if (e.key==='Enter') document.getElementById('sg-create').click(); });
+
+document.querySelectorAll('.sg-sortb').forEach(b => b.addEventListener('click', () => {
+  groupSort = b.dataset.sort;
+  document.querySelectorAll('.sg-sortb').forEach(x => x.classList.toggle('on', x === b));
+  renderGroups();
+}));
 
 document.addEventListener('click', e => {
   const del = e.target.closest('[data-del]');
