@@ -673,7 +673,14 @@ function renderPage(V, opts={}) {
   const stWithOdo=stats(withOdo), stNoOdo=stats(noOdo);
   const noOdoPct=(r1.length?(100*noOdo.length/r1.length):0);
   const odoPrem=(stWithOdo&&stNoOdo)?stWithOdo.avg-stNoOdo.avg:0;
-  const odoPremPct=(stNoOdo&&stNoOdo.avg)?(odoPrem/stNoOdo.avg*100):0;
+  // National per-car premium — used as the impact basis when a filtered seller
+  // has too little of its own data to derive one (e.g. reports no mileage at all).
+  const nat1 = filtered ? allV.filter(v=>inP(v,p1)) : r1;
+  const nWithOdo=stats(nat1.filter(v=>v.odo>0)), nNoOdo=stats(nat1.filter(v=>!v.odo||v.odo<=0));
+  const natOdoPrem=(nWithOdo&&nNoOdo)?nWithOdo.avg-nNoOdo.avg:0;
+  const odoUsesNat = !(stWithOdo && stWithOdo.count>=10 && odoPrem>0);
+  const odoPremCalc = odoUsesNat ? natOdoPrem : odoPrem;
+  const odoPremPct=(stNoOdo&&stNoOdo.avg)?(odoPremCalc/stNoOdo.avg*100):0;
 
   const bands=[['Under 25K',0,25000],['25K–50K',25000,50000],['50K–75K',50000,75000],['75K–100K',75000,100000],['100K–150K',100000,150000],['150K+',150000,Infinity],['No Reading',-1,-1]];
   const odoData=bands.map(([lbl,lo,hi])=>{
@@ -692,6 +699,10 @@ function renderPage(V, opts={}) {
   const stBest=stats(r1.filter(v=>v.has_key&&v.starts));
   const stWorst=stats(r1.filter(v=>v.no_key&&!v.starts));
   const fullPrem=(stBest&&stWorst)?stBest.avg-stWorst.avg:null;
+  const nBest=stats(nat1.filter(v=>v.has_key&&v.starts)), nWorst=stats(nat1.filter(v=>v.no_key&&!v.starts));
+  const natFullPrem=(nBest&&nWorst)?nBest.avg-nWorst.avg:0;
+  const ksUsesNat = !(stBest && stBest.count>=10 && fullPrem>0);
+  const fullPremCalc = ksUsesNat ? natFullPrem : (fullPrem||0);
 
   // ── Doc mix ────────────────────────────────────────────────────────────────
   const dmap={};
@@ -859,7 +870,7 @@ function renderPage(V, opts={}) {
         <div class="mi-chart">${hBarSVG(odoData,{W:440,rowH:30,padL:100,padR:108})}</div>
         ${(()=>{
           if(!stWithOdo||!stNoOdo||odoPrem<=0) return '';
-          return insight(`<span class="hi">${noOdoPct.toFixed(0)}%</span> of vehicles arrive with no odometer reading. Those with a readable mileage average <span class="hi">${fmtD(odoPrem)} more</span> (<span class="iup">+${odoPremPct.toFixed(0)}%</span>). <strong>Bring a jump box</strong> — starting a car lets you capture the odometer, which buyers pay a significant premium for. The reading confirms the mileage band and unlocks that value immediately.`);
+          return insight(`<span class="hi">${noOdoPct.toFixed(0)}%</span> of vehicles arrive with no odometer reading. Those with a readable mileage average <span class="hi">${fmtD(odoPremCalc)} more</span> (<span class="iup">+${odoPremPct.toFixed(0)}%</span>). <strong>Bring a jump box</strong> — starting a car lets you capture the odometer, which buyers pay a significant premium for. The reading confirms the mileage band and unlocks that value immediately.`);
         })()}
       </div>
       <div class="mi-card">
@@ -880,7 +891,7 @@ function renderPage(V, opts={}) {
         </div>
         ${(()=>{
           if(!fullPrem||!kPrem||!sPrem) return '';
-          return insight(`A vehicle with a key that starts sells for <span class="hi">${fmtD(fullPrem)} more</span> than a no-key, non-starter. Key alone adds <span class="hi">+${fmtD(kPrem)}</span>; starts alone adds <span class="hi">+${fmtD(sPrem)}</span>. A spare key and a jump box are two of the cheapest ways to move vehicles up the value ladder.`);
+          return insight(`A vehicle with a key that starts sells for <span class="hi">${fmtD(fullPremCalc)} more</span> than a no-key, non-starter. Key alone adds <span class="hi">+${fmtD(kPrem)}</span>; starts alone adds <span class="hi">+${fmtD(sPrem)}</span>. A spare key and a jump box are two of the cheapest ways to move vehicles up the value ladder.`);
         })()}
         <div class="mi-card-title" style="margin-top:18px">Documentation Mix (last 60d)</div>
         ${docBars}
@@ -924,8 +935,8 @@ function renderPage(V, opts={}) {
             <span class="ic-desc">of vehicles have a confirmed odometer reading<br>(${fmtN(withOdo.length)} of ${fmtN(r1.length)})</span>
           </div>
           <div class="ic-stat">
-            <span class="ic-big">${fmtD(odoPrem)}</span>
-            <span class="ic-desc">avg sale premium when mileage is known vs unknown</span>
+            <span class="ic-big">${fmtD(odoPremCalc)}</span>
+            <span class="ic-desc">avg sale premium when mileage is known vs unknown${odoUsesNat&&filtered?' <em>(national average — this seller has little/no mileage on record)</em>':''}</span>
           </div>
           <div class="ic-stat">
             <span class="ic-big">11.5%</span>
@@ -997,8 +1008,8 @@ function renderPage(V, opts={}) {
             <span class="ic-desc">of vehicles arrive with a key and able to start<br>(${fmtN(r1.filter(v=>v.has_key&&v.starts).length)} of ${fmtN(r1.length)})</span>
           </div>
           <div class="ic-stat">
-            <span class="ic-big">${fullPrem!=null?fmtD(fullPrem):'—'}</span>
-            <span class="ic-desc">avg premium: has key + starts vs no key + no start</span>
+            <span class="ic-big">${fmtD(fullPremCalc)}</span>
+            <span class="ic-desc">avg premium: has key + starts vs no key + no start${ksUsesNat&&filtered?' <em>(national average)</em>':''}</span>
           </div>
           <div class="ic-stat">
             <span class="ic-big">11.5%</span>
@@ -1075,7 +1086,7 @@ function renderPage(V, opts={}) {
     label:'mileage reporting',
     v60Id:'ic-add-vehicles', val60Id:'ic-add-value', rev60Id:'ic-add-revenue',
     vYrId:'ic-add-vehicles-yr', valYrId:'ic-add-value-yr', revYrId:'ic-add-revenue-yr',
-    current:withOdo.length, total:r1.length, prem:odoPrem
+    current:withOdo.length, total:r1.length, prem:odoPremCalc
   });
 
   const ksGood = r1.filter(v=>v.has_key&&v.starts).length;
@@ -1084,7 +1095,7 @@ function renderPage(V, opts={}) {
     label:'vehicles arriving with key that start',
     v60Id:'ks-add-vehicles', val60Id:'ks-add-value', rev60Id:'ks-add-revenue',
     vYrId:'ks-add-vehicles-yr', valYrId:'ks-add-value-yr', revYrId:'ks-add-revenue-yr',
-    current:ksGood, total:r1.length, prem:fullPrem??0
+    current:ksGood, total:r1.length, prem:fullPremCalc
   });
 
   // ── Condition profile tables ───────────────────────────────────────────────

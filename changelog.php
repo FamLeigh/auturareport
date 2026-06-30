@@ -2,6 +2,7 @@
 require_once __DIR__ . '/includes/auth.php';
 
 $ENTRIES = [
+    ['v1.27 Beta', 'June 30, 2026', 'Market Report: the Buyer Premium — Revenue Impact calculators now fall back to the national per-car premium when a filtered seller has too little of its own data to derive one (e.g. a seller that reports no mileage at all). Previously the projection collapsed to $0; now it applies the market premium to that seller\'s volume, with a note that the national average is being used.'],
     ['v1.26 Beta', 'June 30, 2026', 'Market Report: in the Buyer Premium — Revenue Impact section, the "your premium" dollar figures (your take) are now hidden by default. A "+ My premium" toggle on each calculator reveals them when needed; the rest of the section (mileage/key/start rates and added sale value) stays visible.'],
     ['v1.25 Beta', 'June 30, 2026', 'Buyer Market Report gains Region / Seller / Group filters (same as the Market Report). Pick a seller to see exactly who buys their inventory — every view (geography, segments, top buyers, supply→demand) re-slices to the selection.'],
     ['v1.24 Beta', 'June 30, 2026', 'The home page is now a dashboard with six headline metrics: total sales, total sellers, and total winners (unique buyers) over the past 18 months, plus average sale price split by mileage known/unknown, keys/no keys, and starts/does-not-start. The valuation tool moved to its own page, “Autura Valuation Tool,” at /autura-valuation-tool.'],
