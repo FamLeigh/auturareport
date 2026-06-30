@@ -105,6 +105,7 @@ const SELLERS = <?= $sellers_json ?>;  // [{name, count}]
 let selected = Object.keys(GROUPS)[0] || null;
 let dirty = false;
 let term = '';
+let editingName = false;
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fmtN = n => Number(n||0).toLocaleString();
 
@@ -128,14 +129,34 @@ function renderEditor(){
   const rows = SELLERS.filter(s => !ft || s.name.toLowerCase().includes(ft)).map(s =>
     `<label class="sg-sopt"><input type="checkbox" data-seller="${esc(s.name)}" ${members.has(s.name)?'checked':''}><span>${esc(s.name)}</span><span class="sc">${fmtN(s.count)}</span></label>`
   ).join('');
-  ed.innerHTML = `
-    <div class="sg-ed-head"><h3>${esc(selected)}</h3><span class="cr-sub" style="font-size:12px;color:var(--text-muted)">${fmtN(members.size)} of ${fmtN(SELLERS.length)} sellers</span></div>
+  const headHTML = editingName
+    ? `<div class="sg-ed-head" style="gap:8px"><input class="sg-search" id="sg-rename" style="margin:0;flex:1;min-width:200px" maxlength="60" value="${esc(selected)}"><button class="sg-btn" id="sg-rename-save">Save name</button><button class="sg-btn ghost" id="sg-rename-cancel">Cancel</button></div>`
+    : `<div class="sg-ed-head"><div style="display:flex;align-items:center;gap:10px"><h3>${esc(selected)}</h3><button class="sg-btn ghost" id="sg-rename-btn" style="padding:5px 11px;font-size:12px">Rename</button></div><span class="cr-sub" style="font-size:12px;color:var(--text-muted)">${fmtN(members.size)} of ${fmtN(SELLERS.length)} sellers</span></div>`;
+  ed.innerHTML = headHTML + `
     <div class="sg-tools"><button id="sg-all">Select all shown</button><button id="sg-none">Clear all</button></div>
     <input class="sg-search" id="sg-search" type="text" placeholder="Search sellers…" value="${esc(term)}">
     <div class="sg-sellers">${rows || '<div class="sg-empty">No sellers match.</div>'}</div>`;
+  if (editingName) {
+    const ri = document.getElementById('sg-rename'); ri.focus(); ri.select();
+    ri.addEventListener('keydown', e => { if (e.key==='Enter') { e.preventDefault(); commitRename(); } else if (e.key==='Escape') { editingName=false; renderEditor(); } });
+    document.getElementById('sg-rename-save').addEventListener('click', commitRename);
+    document.getElementById('sg-rename-cancel').addEventListener('click', () => { editingName=false; renderEditor(); });
+  } else {
+    document.getElementById('sg-rename-btn').addEventListener('click', () => { editingName=true; renderEditor(); });
+  }
   const s = document.getElementById('sg-search'); s.addEventListener('input', e => { term = e.target.value; renderEditor(); });
   document.getElementById('sg-all').addEventListener('click', () => { const ft=term.trim().toLowerCase(); SELLERS.filter(x=>!ft||x.name.toLowerCase().includes(ft)).forEach(x=>members.add(x.name)); GROUPS[selected]=[...members]; setDirty(true); renderGroups(); renderEditor(); });
   document.getElementById('sg-none').addEventListener('click', () => { GROUPS[selected]=[]; setDirty(true); renderGroups(); renderEditor(); });
+}
+
+function commitRename(){
+  const inp = document.getElementById('sg-rename'); if (!inp) return;
+  const nn = inp.value.trim();
+  if (!nn || nn === selected) { editingName = false; renderEditor(); return; }
+  if (GROUPS[nn]) { alert('A group named "' + nn + '" already exists.'); return; }
+  // Rebuild preserving order, swapping the key so positions stay put.
+  const next = {}; Object.keys(GROUPS).forEach(k => { next[k === selected ? nn : k] = GROUPS[k]; });
+  GROUPS = next; selected = nn; editingName = false; setDirty(true); render();
 }
 
 function render(){ renderGroups(); renderEditor(); }
@@ -151,7 +172,7 @@ document.getElementById('sg-newname').addEventListener('keydown', e => { if (e.k
 document.addEventListener('click', e => {
   const del = e.target.closest('[data-del]');
   if (del) { e.stopPropagation(); const n=del.dataset.del; if (confirm('Delete group "'+n+'"?')) { delete GROUPS[n]; if (selected===n) selected=Object.keys(GROUPS)[0]||null; setDirty(true); render(); } return; }
-  const g = e.target.closest('[data-group]'); if (g) { selected = g.dataset.group; term=''; render(); return; }
+  const g = e.target.closest('[data-group]'); if (g) { selected = g.dataset.group; term=''; editingName=false; render(); return; }
 });
 document.addEventListener('change', e => {
   const cb = e.target.closest('input[data-seller]'); if (!cb || !selected) return;
