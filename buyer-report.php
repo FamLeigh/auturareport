@@ -16,7 +16,7 @@ if (!$cr_ok) {
     include __DIR__ . '/includes/header.php';
     ?>
     <div class="container">
-      <section style="padding:56px 0 8px;"><h1 style="font-size:clamp(1.7rem,4vw,2.4rem);">Buyer Market Report</h1></section>
+      <section style="padding:calc(var(--nav-h) + 24px) 0 8px;"><h1 style="font-size:clamp(1.7rem,4vw,2.4rem);">Buyer Market Report</h1></section>
       <form class="cr-gate" method="POST" autocomplete="off">
         <h2>Access code required</h2>
         <p>Enter the access code to view the Buyer Market Report.</p>
@@ -104,7 +104,7 @@ $state_paths  = amr_state_paths();
 
 $extra_head = '<meta name="robots" content="noindex, nofollow">
 <style>
-.br-hero { padding:48px 0 6px; }
+.br-hero { padding:calc(var(--nav-h) + 24px) 0 6px; }
 .br-kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin:14px 0 8px; }
 @media (max-width:720px){ .br-kpis{ grid-template-columns:repeat(2,1fr);} }
 .br-kpi { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:14px 16px; }

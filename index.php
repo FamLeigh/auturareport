@@ -46,7 +46,7 @@ if (file_exists($amr_data_file) && ($data = json_decode(file_get_contents($amr_d
 
 $extra_head = '<meta name="robots" content="noindex, nofollow">
 <style>
-.dash-hero { padding:56px 0 8px; }
+.dash-hero { padding:calc(var(--nav-h) + 28px) 0 8px; }
 .dash-hero h1 { font-size:clamp(1.8rem,4vw,2.5rem); margin-bottom:6px; }
 .dash-sub { color:var(--text-muted); font-size:14px; }
 .dash-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin:22px 0 28px; }

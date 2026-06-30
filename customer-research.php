@@ -12,7 +12,7 @@ if (!$cr_ok) {
     include __DIR__ . '/includes/header.php';
     ?>
     <div class="container">
-      <section style="padding:56px 0 8px;"><h1 style="font-size:clamp(1.7rem,4vw,2.4rem);">Customer Research</h1></section>
+      <section style="padding:calc(var(--nav-h) + 24px) 0 8px;"><h1 style="font-size:clamp(1.7rem,4vw,2.4rem);">Customer Research</h1></section>
       <form class="cr-gate" method="POST" autocomplete="off">
         <h2>Access code required</h2>
         <p>Enter the access code to view Customer Research.</p>

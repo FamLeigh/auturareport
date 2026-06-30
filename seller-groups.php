@@ -108,7 +108,7 @@ $extra_head = '<meta name="robots" content="noindex, nofollow">
 include __DIR__ . '/includes/header.php';
 ?>
 <div class="container">
-  <section class="cr-hero" style="padding:56px 0 8px;">
+  <section class="cr-hero" style="padding:calc(var(--nav-h) + 24px) 0 8px;">
     <h1 style="font-size:clamp(1.7rem,4vw,2.4rem);margin-bottom:6px;">Define Seller Groups</h1>
     <p class="cr-sub" style="font-size:13px;color:var(--text-muted);">Create named groups of sellers, then use the <strong>Group</strong> filter on the Market Report. Changes save to the server.</p>
   </section>
