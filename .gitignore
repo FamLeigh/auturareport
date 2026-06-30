@@ -13,3 +13,7 @@ data/impound-aliases.json
 data/impound-memos.json
 assets/csvs/
 data/seller-groups.json
+
+# scratch / local-only
+.claude/
+temporary-screenshots/
