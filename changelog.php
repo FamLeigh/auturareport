@@ -2,6 +2,7 @@
 require_once __DIR__ . '/includes/auth.php';
 
 $ENTRIES = [
+    ['v1.20 Beta', 'June 30, 2026', 'Customer Research and Impound Volume now require the customer-data access code (same one as Seller-Results). Added Login Activity to the Settings menu. Seller Groups save is hardened so an interrupted save can no longer wipe groups (with backups + confirmation before clearing all).'],
     ['v1.19 Beta', 'June 30, 2026', 'Seller Groups. New Settings → Define Seller Groups page to create named groups and assign sellers to them. The Market Report gains a Group filter (appears once groups are defined) that filters to the pooled sellers of the selected group(s), alongside Region and Seller.'],
     ['v1.18 Beta', 'June 30, 2026', 'Navigation reorg + two reports promoted. "Customer Results" renamed to Seller-Results. New "Cust Data" menu (Customer Research, Impound Map) and "Settings" menu (Changelog, Update Data). The access-code (PIN) field is now masked. Market Report KPI pills show current / prior-60 / same-period-last-year values.'],
     ['v1.17 Beta', 'June 16, 2026', 'Market Report: the Seller filter now lists only sellers from the selected Region(s) — pick a region and the Seller dropdown narrows to that region\'s sellers (and resets to all when the region is cleared).'],

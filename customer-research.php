@@ -1,6 +1,31 @@
 <?php
 require_once __DIR__ . '/includes/auth.php';        // require Autura login
 require_once __DIR__ . '/includes/functions.php';
+require_once __DIR__ . '/includes/customer_data.php';
+
+// Require the customer-data access code (shared with Seller-Results).
+list($cr_ok, $cr_error) = amr_customer_gate();
+if (!$cr_ok) {
+    $page_title = 'Customer Research';
+    $body_class = 'page-research';
+    $extra_head = '<meta name="robots" content="noindex, nofollow">';
+    include __DIR__ . '/includes/header.php';
+    ?>
+    <div class="container">
+      <section style="padding:56px 0 8px;"><h1 style="font-size:clamp(1.7rem,4vw,2.4rem);">Customer Research</h1></section>
+      <form class="cr-gate" method="POST" autocomplete="off">
+        <h2>Access code required</h2>
+        <p>Enter the access code to view Customer Research.</p>
+        <?php if ($cr_error): ?><div class="err"><?= h($cr_error) ?></div><?php endif; ?>
+        <input class="cr-code-input" type="password" name="cr_code" inputmode="numeric" pattern="[0-9]*"
+               maxlength="6" placeholder="••••••" autocomplete="off" autofocus required>
+        <button type="submit">Unlock</button>
+      </form>
+    </div>
+    <?php
+    include __DIR__ . '/includes/footer.php';
+    exit;
+}
 
 // Hidden / local-only research view over the CRM contact export.
 $page_title = 'Customer Research';

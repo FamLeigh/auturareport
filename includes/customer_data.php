@@ -2,7 +2,7 @@
 // Shared access gate + seller aggregation for the customer-facing reports
 // (Customer Results, 90-Day Activity). Requires a started session + config.
 
-const CR_ACCESS_CODE = '2862';
+const CR_ACCESS_CODE = '119607';
 
 // Processes the 4-digit code form. Returns [bool $ok, string $error].
 function amr_customer_gate(): array {

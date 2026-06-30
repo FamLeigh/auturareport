@@ -46,7 +46,7 @@
           ];
           $menus = [
             'Cust Data' => ['/customer-research' => 'Customer Research', '/impound-map' => 'Impound Map'],
-            'Settings'  => ['/seller-groups' => 'Define Seller Groups', '/changelog' => 'Changelog', '/update' => 'Update Data'],
+            'Settings'  => ['/seller-groups' => 'Define Seller Groups', '/access-log' => 'Login Activity', '/changelog' => 'Changelog', '/update' => 'Update Data'],
           ];
           foreach ($top_links as $href => $label):
         ?>

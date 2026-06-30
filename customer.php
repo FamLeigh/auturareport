@@ -35,10 +35,10 @@ include __DIR__ . '/includes/header.php';
 
   <form class="cr-gate" method="POST" autocomplete="off">
     <h2>Access code required</h2>
-    <p>Enter the 4-digit code to view Seller-Results.</p>
+    <p>Enter the access code to view Seller-Results.</p>
     <?php if ($cr_error): ?><div class="err"><?= h($cr_error) ?></div><?php endif; ?>
     <input class="cr-code-input" type="password" name="cr_code" inputmode="numeric" pattern="[0-9]*"
-           maxlength="4" placeholder="••••" autocomplete="off" autofocus required>
+           maxlength="6" placeholder="••••••" autocomplete="off" autofocus required>
     <button type="submit">Unlock</button>
   </form>
 
