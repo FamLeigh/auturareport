@@ -40,9 +40,10 @@
         <?php
           $current_path = strtok($_SERVER['REQUEST_URI'], '?');
           $top_links = [
-            '/'                     => 'Valuation',
-            '/autura-market-report' => 'Market Report',
-            '/customer-results'     => 'Seller-Results',
+            '/'                        => 'Dashboard',
+            '/autura-valuation-tool'   => 'Valuation',
+            '/autura-market-report'    => 'Market Report',
+            '/customer-results'        => 'Seller-Results',
           ];
           $menus = [
             'Cust Data' => ['/buyer-report' => 'Buyer Report', '/customer-research' => 'Customer Research', '/impound-map' => 'Impound Map'],
