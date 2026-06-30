@@ -328,6 +328,54 @@ function amr_normalize_doc(string $raw): string {
     return 'Other';
 }
 
+// Buyer Type is messy free-text (110+ variants). Collapse to canonical buckets.
+function amr_normalize_buyer_type(string $raw): string {
+    $r = strtolower(trim($raw));
+    if ($r === '') return '';
+    if (strpos($r, 'dismantl') !== false)                                   return 'Dismantler';
+    if (strpos($r, 'recycl') !== false || strpos($r, 'scrap') !== false)    return 'Recycler';
+    if (strpos($r, 'parts') !== false)                                      return 'Parts Reseller';
+    if (strpos($r, 'cash 4') !== false || strpos($r, 'cash for') !== false || strpos($r, 'junk') !== false) return 'Cash-for-Cars';
+    if (strpos($r, 'repair') !== false || strpos($r, 'mechanic') !== false || strpos($r, 'body shop') !== false || strpos($r, 'collision') !== false) return 'Repair / Body';
+    if (strpos($r, 'tow') !== false || strpos($r, 'roadside') !== false)    return 'Towing';
+    if (strpos($r, 'export') !== false)                                     return 'Exporter';
+    if (strpos($r, 'transport') !== false || strpos($r, 'logistic') !== false || strpos($r, 'haul') !== false || strpos($r, 'trucking') !== false) return 'Transport / Logistics';
+    if (strpos($r, 'rent') !== false)                                       return 'Rental';
+    if (strpos($r, 'insur') !== false)                                      return 'Insurance';
+    if (strpos($r, 'dealer') !== false || strpos($r, 'dealership') !== false || strpos($r, 'auto sales') !== false || strpos($r, 'motors') !== false) return 'Dealer';
+    return 'Other';
+}
+
+// US state normalizer (full name OR 2-letter → 2-letter). Non-US / blank → '' .
+const AMR_STATE_ABBR = [
+    'ALABAMA'=>'AL','ALASKA'=>'AK','ARIZONA'=>'AZ','ARKANSAS'=>'AR','CALIFORNIA'=>'CA','COLORADO'=>'CO',
+    'CONNECTICUT'=>'CT','DELAWARE'=>'DE','FLORIDA'=>'FL','GEORGIA'=>'GA','HAWAII'=>'HI','IDAHO'=>'ID',
+    'ILLINOIS'=>'IL','INDIANA'=>'IN','IOWA'=>'IA','KANSAS'=>'KS','KENTUCKY'=>'KY','LOUISIANA'=>'LA',
+    'MAINE'=>'ME','MARYLAND'=>'MD','MASSACHUSETTS'=>'MA','MICHIGAN'=>'MI','MINNESOTA'=>'MN','MISSISSIPPI'=>'MS',
+    'MISSOURI'=>'MO','MONTANA'=>'MT','NEBRASKA'=>'NE','NEVADA'=>'NV','NEW HAMPSHIRE'=>'NH','NEW JERSEY'=>'NJ',
+    'NEW MEXICO'=>'NM','NEW YORK'=>'NY','NORTH CAROLINA'=>'NC','NORTH DAKOTA'=>'ND','OHIO'=>'OH','OKLAHOMA'=>'OK',
+    'OREGON'=>'OR','PENNSYLVANIA'=>'PA','RHODE ISLAND'=>'RI','SOUTH CAROLINA'=>'SC','SOUTH DAKOTA'=>'SD',
+    'TENNESSEE'=>'TN','TEXAS'=>'TX','UTAH'=>'UT','VERMONT'=>'VT','VIRGINIA'=>'VA','WASHINGTON'=>'WA',
+    'WEST VIRGINIA'=>'WV','WISCONSIN'=>'WI','WYOMING'=>'WY','DISTRICT OF COLUMBIA'=>'DC',
+];
+const AMR_STATE_CODES = ['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY',
+    'LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA',
+    'RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY','DC'];
+function amr_us_state(string $raw): string {
+    $r = strtoupper(trim($raw));
+    if ($r === '') return '';
+    if (in_array($r, AMR_STATE_CODES, true)) return $r;
+    return AMR_STATE_ABBR[$r] ?? '';   // unknown / non-US → '' (bucketed as "other" by reports)
+}
+
+// Parse "M/D/Y H:i:s" (and bare "M/D/Y") → "YYYY-MM". Returns '' if not a slash date.
+function amr_month_from_datetime(string $s): string {
+    if (preg_match('#^\s*(\d{1,2})/(\d{1,2})/(\d{4})#', $s, $m)) {
+        return $m[3] . '-' . str_pad($m[1], 2, '0', STR_PAD_LEFT);
+    }
+    return '';
+}
+
 // Returns the index for a value in a dictionary, inserting if new
 function intern(string $val, array &$dict): int {
     if (!isset($dict[$val])) {
@@ -359,6 +407,14 @@ $docs    = [];
 $months  = [];
 $sellers = [];
 $records = [];
+// Buyer-side dictionaries (month/region/seller/make are shared with the vehicle
+// dicts above since both record sets are built in the same pass).
+$auctions = [];
+$buyers   = [];
+$cities   = [];
+$states   = [];
+$btypes   = [];
+$buyer_records = [];
 $skipped = 0;
 $total_rows = 0;
 
@@ -371,17 +427,20 @@ foreach ($files as $file) {
         continue;
     }
 
-    // Scan for the header row (strip UTF-8 BOM if present)
+    // Scan for the header row (strip UTF-8 BOM if present). Detect by column
+    // presence so both the legacy and new export layouts are supported.
     $header = null;
     while (($row = fgetcsv($handle, 0, ',', '"', '\\')) !== false) {
         if (empty(array_filter($row))) continue;
-        $first = strtolower(trim(ltrim($row[0] ?? '', "\xEF\xBB\xBF")));
-        if ($first === 'monthly auction start date') {
-            $row[0] = ltrim($row[0], "\xEF\xBB\xBF");
-            $header = array_map(
-                fn($h) => str_replace('odomeer', 'odometer', strtolower(trim($h))),
-                $row
-            );
+        $row[0] = ltrim($row[0] ?? '', "\xEF\xBB\xBF");
+        $cells  = array_map(
+            fn($h) => str_replace('odomeer', 'odometer', strtolower(trim($h))),
+            $row
+        );
+        if (in_array('seller name', $cells, true)
+            && in_array('vehicle make', $cells, true)
+            && in_array('total sale price excl fees', $cells, true)) {
+            $header = $cells;
             break;
         }
     }
@@ -404,7 +463,21 @@ foreach ($files as $file) {
     $doc_i    = $idx['vehicle documentation type'] ?? null;
     $odo_i    = $idx['vehicle odometer']           ?? null;
     $seller_i = $idx['seller name']                ?? null;
-    $month_i  = 0;
+
+    // New columns: auction event, buyer details, reserve price.
+    $auction_i = $idx['auction name']        ?? null;
+    $bfirst_i  = $idx['buyer first name']    ?? null;
+    $blast_i   = $idx['buyer last name']     ?? null;
+    $bcomp_i   = $idx['buyer company name']  ?? null;
+    $bcity_i   = $idx['buyer city']          ?? null;
+    $bstate_i  = $idx['buyer state']         ?? null;
+    $btype_i   = $idx['buyer type']          ?? null;
+    $reserve_i = $idx['total reserve price'] ?? null;
+
+    // Month source: legacy textual "Apr 2026" column, else a slash-date column.
+    $monthly_i = $idx['monthly auction start date'] ?? null;
+    $sold_i    = $idx['sold date time']             ?? null;
+    $astart_i  = $idx['auction start date']         ?? null;
 
     if ($price_i === null || $year_i === null || $make_i === null || $model_i === null) {
         echo "  Missing required columns (price/year/make/model), skipping.\n";
@@ -443,34 +516,68 @@ foreach ($files as $file) {
 
         $odo = ($odo_raw !== '' && is_numeric($odo_raw)) ? (int)$odo_raw : 0;
 
-        $month_str = strtolower(trim($row[$month_i] ?? ''));
         global $MONTHS;
-        // Handles "Apr 2026" (space) and "Apr-26" (hyphen, 2-digit year)
-        $sep     = strpos($month_str, '-') !== false ? '-' : ' ';
-        $m_parts = explode($sep, $month_str);
-        if (count($m_parts) === 2 && isset($MONTHS[$m_parts[0]])) {
-            $yr    = $m_parts[1];
-            $yr    = strlen($yr) === 2 ? '20' . $yr : $yr;
-            $month = $yr . '-' . $MONTHS[$m_parts[0]];
+        if ($monthly_i !== null) {
+            // Legacy textual month: "Apr 2026" (space) or "Apr-26" (hyphen, 2-digit year)
+            $month_str = strtolower(trim($row[$monthly_i] ?? ''));
+            $sep     = strpos($month_str, '-') !== false ? '-' : ' ';
+            $m_parts = explode($sep, $month_str);
+            $month   = (count($m_parts) === 2 && isset($MONTHS[$m_parts[0]]))
+                ? ((strlen($m_parts[1]) === 2 ? '20' . $m_parts[1] : $m_parts[1]) . '-' . $MONTHS[$m_parts[0]])
+                : '';
         } else {
-            $month = '';
+            // New format: derive month from the sale datetime (fallback: auction start)
+            $month = amr_month_from_datetime($row[$sold_i ?? -1] ?? '');
+            if ($month === '' && $astart_i !== null) $month = amr_month_from_datetime($row[$astart_i] ?? '');
         }
 
         $doc   = amr_normalize_doc($doc_raw);
         $flags = ($has_key ? 1 : 0) | ($no_key ? 2 : 0) | ($starts ? 4 : 0);
 
+        // Shared dictionary indices (reused by both record sets).
+        $mk_i = intern($make,   $makes);
+        $rg_i = intern($region, $regions);
+        $mo_i = $month  !== '' ? intern($month,  $months)  : -1;
+        $se_i = $seller !== '' ? intern($seller, $sellers) : -1;
+
         $records[] = [
-            intern($make,   $makes),
-            intern($model,  $models),
+            $mk_i,
+            intern($model, $models),
             $year,
             (int)round($price),
             $flags,
-            intern($region, $regions),
-            intern($doc,    $docs),
+            $rg_i,
+            intern($doc, $docs),
             $odo,
-            $month !== '' ? intern($month, $months) : -1,
-            $seller !== '' ? intern($seller, $sellers) : -1,
+            $mo_i,
+            $se_i,
         ];
+
+        // ── Buyer-side record (separate, gated dataset) ──────────────────────
+        $bfirst  = trim($row[$bfirst_i ?? -1] ?? '');
+        $blast   = trim($row[$blast_i  ?? -1] ?? '');
+        $bcomp   = trim($row[$bcomp_i  ?? -1] ?? '');
+        $buyer   = $bcomp !== '' ? $bcomp : trim($bfirst . ' ' . $blast);
+        if ($buyer !== '') {
+            $bcity    = trim($row[$bcity_i ?? -1] ?? '');
+            $bstate   = amr_us_state($row[$bstate_i ?? -1] ?? '');
+            $btype    = amr_normalize_buyer_type($row[$btype_i ?? -1] ?? '');
+            $auction  = trim($row[$auction_i ?? -1] ?? '');
+            $reserve  = (int)round((float)($row[$reserve_i ?? -1] ?? 0));
+            $buyer_records[] = [
+                $mo_i,
+                $rg_i,
+                $se_i,
+                $auction !== '' ? intern($auction, $auctions) : -1,
+                intern($buyer, $buyers),
+                $bcity  !== '' ? intern($bcity,  $cities) : -1,
+                $bstate !== '' ? intern($bstate, $states) : -1,
+                $btype  !== '' ? intern($btype,  $btypes) : -1,
+                $mk_i,
+                (int)round($price),
+                $reserve,
+            ];
+        }
     }
 
     fclose($handle);
@@ -514,13 +621,46 @@ if ($json === false || $json === '') {
     exit(1);
 }
 file_put_contents($data_file, $json);
+
+// ── Buyer dataset (separate file; contains buyer PII → web-blocked + gitignored) ──
+$buyer_kept = count($buyer_records);
+if ($buyer_kept > 0) {
+    $buyer_output = [
+        'months'   => dict_to_array($months),
+        'regions'  => dict_to_array($regions),
+        'sellers'  => dict_to_array($sellers),
+        'makes'    => dict_to_array($makes),
+        'auctions' => dict_to_array($auctions),
+        'buyers'   => dict_to_array($buyers),
+        'cities'   => dict_to_array($cities),
+        'states'   => dict_to_array($states),
+        'types'    => dict_to_array($btypes),
+        // record: [month, region, seller, auction, buyer, city, state, type, make, price, reserve]
+        'records'  => $buyer_records,
+    ];
+    $buyers_file = __DIR__ . '/data/amr-buyers.json';
+    $bjson = json_encode($buyer_output, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE);
+    if ($bjson !== false && $bjson !== '') {
+        file_put_contents($buyers_file, $bjson);
+    } else {
+        fwrite(STDERR, "WARNING: buyer json_encode failed (" . json_last_error_msg() . ") — buyer file not written.\n");
+        $buyer_kept = 0;
+    }
+}
+
 file_put_contents($meta_file, json_encode([
-    'count'     => $kept,
-    'built'     => date('Y-m-d H:i:s'),
-    'data_date' => $data_date,
+    'count'        => $kept,
+    'buyer_count'  => $buyer_kept,
+    'unique_buyers'=> count($buyers),
+    'built'        => date('Y-m-d H:i:s'),
+    'data_date'    => $data_date,
 ], JSON_PRETTY_PRINT));
 
 $size_mb = round(filesize($data_file) / 1048576, 2);
 echo "\nWrote: {$data_file} ({$size_mb} MB)\n";
+if ($buyer_kept > 0) {
+    $bsize = round(filesize(__DIR__ . '/data/amr-buyers.json') / 1048576, 2);
+    echo "Wrote: data/amr-buyers.json ({$bsize} MB, {$buyer_kept} buyer rows, " . count($buyers) . " unique buyers)\n";
+}
 echo "Wrote: {$meta_file}\n";
 echo "Done.\n";

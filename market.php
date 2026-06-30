@@ -503,20 +503,21 @@ function pRow(lbl,v1,v2,v3,fn) {
 }
 function sRow(lbl,v1,v2,v3){return `<tr><td>${lbl}</td><td>${v1??'—'}</td><td>${v2??'—'}</td><td>${v3??'—'}</td></tr>`;}
 
-function kpiCard(title,value,sub,key,fmt,s1,s2,s3,filtered,ns1){
+function kpiCard(title,value,sub,key,fmt,s1,s2,s3,filtered,ns1,showVsNat=true){
   const dspan=(cur,base)=>{
     if(cur==null||base==null||!base) return '';
     const d=(cur-base)/base*100; const cls=d>0?'pos':d<0?'neg':'neu';
     return `<span class="kpi-d ${cls}">${d>0?'▲':d<0?'▼':'–'}${Math.abs(d).toFixed(1)}%</span>`;
   };
-  let body='';
-  if(filtered){
-    if(s1&&ns1&&ns1[key]){const d=(s1[key]-ns1[key])/ns1[key]*100;const cls=d>0?'pos':d<0?'neg':'neu';
-      body=`<div class="kpi-d ${cls}">${d>0?'▲':d<0?'▼':'–'}${Math.abs(d).toFixed(1)}% vs national</div>`;}
-  } else {
-    body=`
+  // Always show the current-vs-prior-60 and current-vs-same-period-last-year rows.
+  let body=`
       <div class="kpi-cmp"><span>Prior 60 days</span><span><b>${s2?fmt(s2[key]):'—'}</b>${dspan(s1?.[key], s2?.[key])}</span></div>
       <div class="kpi-cmp"><span>Same period last year</span><span><b>${s3?fmt(s3[key]):'—'}</b>${dspan(s1?.[key], s3?.[key])}</span></div>`;
+  // When a filter is active, also compare to the national average — except for raw
+  // counts, where "X% vs national" is just the subset size and not meaningful.
+  if(filtered && showVsNat && s1 && ns1 && ns1[key]){
+    const d=(s1[key]-ns1[key])/ns1[key]*100; const cls=d>0?'pos':d<0?'neg':'neu';
+    body+=`<div class="kpi-cmp"><span>National avg</span><span><b>${fmt(ns1[key])}</b><span class="kpi-d ${cls}">${d>0?'▲':d<0?'▼':'–'}${Math.abs(d).toFixed(1)}%</span></span></div>`;
   }
   return `<div class="mi-card"><div class="mi-card-title">${title}</div><div class="kpi-val">${value}</div><div class="kpi-lbl">${sub}</div>${body}</div>`;
 }
@@ -717,7 +718,7 @@ function renderPage(V, opts={}) {
 
     <!-- KPIs -->
     <div class="mi-g3">
-      ${kpiCard('Total Sales (60d)', fmtN(s1?.count??0), curLbl, 'count', fmtN, s1, s2, s3, filtered, ns1)}
+      ${kpiCard('Total Sales (60d)', fmtN(s1?.count??0), curLbl, 'count', fmtN, s1, s2, s3, filtered, ns1, false)}
       ${kpiCard('Avg Sale Price', fmtD(s1?.avg??0), curLbl, 'avg', fmtD, s1, s2, s3, filtered, ns1)}
       ${kpiCard('Median Sale Price', fmtD(s1?.median??0), curLbl, 'median', fmtD, s1, s2, s3, filtered, ns1)}
     </div>

@@ -1,6 +1,7 @@
 .DS_Store
 data/heckel/*.csv
 data/amr-data.json
+data/amr-buyers.json
 data/amr-meta.json
 data/access-log.json
 data/users.json

@@ -479,7 +479,7 @@ include __DIR__ . '/includes/header.php';
 ?>
 
 <section class="hk-hero container">
-  <h1>Autura Marketplace Report <span style="font-size:.55em;font-weight:600;color:var(--accent);letter-spacing:.01em;">(AKA Heckle)</span></h1>
+  <h1>Autura Marketplace Report</h1>
   <p class="lead">
     Valuations based on <?= $amr_record_count > 0 ? number_format($amr_record_count) : 'tens of thousands of' ?> sold auction records from the past 18 months<?= $amr_data_date ? ', as of ' . h($amr_data_date) : '' ?>. Data reflects as-is impound vehicle sales from Autura Marketplace. Beta release for internal evaluation, not for resale. Created by Kevin B. Leigh. Copyright &copy; 2026 Autura NewCo, LLC.
   </p>
