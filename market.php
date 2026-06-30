@@ -411,32 +411,40 @@ function hBarSVG(items, {W=520, rowH=30, padL=120, padR=85, title2='', maxVal}) 
 }
 
 // Grouped bar chart: 3 clusters (for period comparison)
-function groupedBarSVG(clusters, {W=680, H=200, padL=70, padR=16, padT=24, padB=36, labels=['Last 60d','Prior 60d','Year Ago']}) {
+function groupedBarSVG(clusters, {W=680, H=200, padL=64, padR=64, padT=24, padB=36, labels=['Last 60d','Prior 60d','Year Ago'], leftFmt=null, rightFmt=null}) {
   const plotW=W-padL-padR, plotH=H-padT-padB;
   const n=clusters.length, gW=plotW/n;
   // Period color convention: this 60d (near-black) · prior 60d (blue) · last-year (orange)
   const bColors=['var(--p-cur)','var(--p-prev)','var(--p-year)'];
-  const maxVal=Math.max(...clusters.flatMap(c=>c.vals),1);
+  // Dual axis: count metrics scale to the left axis, dollar metrics to the right,
+  // so volume (~10K) doesn't dwarf price (~$1K).
+  const hasRight = clusters.some(c=>c.axis==='right');
+  const leftMax  = Math.max(...clusters.filter(c=>c.axis!=='right').flatMap(c=>c.vals), 1);
+  const rightMax = Math.max(...clusters.filter(c=>c.axis==='right').flatMap(c=>c.vals), 1);
+  const lf = leftFmt  || (v=>v>9999?Math.round(v/1000)+'K':fmtN(v));
+  const rf = rightFmt || (v=>fmtN(v));
 
-  // y-axis grid
-  const yTicks=[0,.25,.5,.75,1].map(f=>{
-    const v=Math.round(f*maxVal), y=(padT+plotH-f*plotH).toFixed(1);
+  const yGrid=[0,.25,.5,.75,1].map(f=>{
+    const y=(padT+plotH-f*plotH).toFixed(1);
     return `<line x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}" class="mi-grid-l"/>
-    <text x="${padL-5}" y="${(+y+4).toFixed(1)}" text-anchor="end" class="mi-lbl">${v>9999?Math.round(v/1000)+'K':fmtN(v)}</text>`;
+    <text x="${padL-6}" y="${(+y+4).toFixed(1)}" text-anchor="end" class="mi-lbl">${lf(Math.round(f*leftMax))}</text>
+    ${hasRight?`<text x="${W-padR+6}" y="${(+y+4).toFixed(1)}" text-anchor="start" class="mi-lbl">${rf(Math.round(f*rightMax))}</text>`:''}`;
   }).join('');
 
   const bW=Math.floor(gW*.2), gap=Math.floor(gW*.04);
 
   const bars=clusters.map((cl,ci)=>{
+    const mx = cl.axis==='right'?rightMax:leftMax;
     const gx=padL+ci*gW+gW/2;
     const bs=cl.vals.map((v,vi)=>{
-      const bh=v?Math.round(v/maxVal*plotH):0;
+      const bh=v?Math.round(v/mx*plotH):0;
       const bx=gx+(vi-1)*(bW+gap)-bW/2;
       const by=padT+plotH-bh;
       return `<rect x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${bW}" height="${bh}" style="fill:${bColors[vi]}" rx="2"/>`;
     }).join('');
+    const hint = !hasRight ? '' : (cl.axis==='right'?' ($)':' (#)');
     return `${bs}
-    <text x="${gx.toFixed(1)}" y="${H-6}" text-anchor="middle" class="mi-lbl">${cl.label}</text>`;
+    <text x="${gx.toFixed(1)}" y="${H-6}" text-anchor="middle" class="mi-lbl">${cl.label}${hint}</text>`;
   }).join('');
 
   // HTML legend above the chart — wraps cleanly so long date-range labels don't collide.
@@ -444,8 +452,9 @@ function groupedBarSVG(clusters, {W=680, H=200, padL=70, padR=16, padT=24, padB=
     `<span class="gbar-key"><span class="gbar-sw" style="background:${bColors[i]}"></span>${l}</span>`).join('')}</div>`;
 
   return `${legend}<svg viewBox="0 0 ${W} ${H}" style="width:100%;display:block;max-width:${W}px">
-    ${yTicks}
+    ${yGrid}
     <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${padT+plotH}" class="mi-axis"/>
+    ${hasRight?`<line x1="${W-padR}" y1="${padT}" x2="${W-padR}" y2="${padT+plotH}" class="mi-axis"/>`:''}
     <line x1="${padL}" y1="${padT+plotH}" x2="${W-padR}" y2="${padT+plotH}" class="mi-axis"/>
     ${bars}
   </svg>`;
@@ -635,15 +644,17 @@ function renderPage(V, opts={}) {
 
   // ── Period grouped bar chart ───────────────────────────────────────────────
   const periodClusters=[
-    {label:'Volume',    vals:[s1?.count??0, s2?.count??0, s3?.count??0]},
-    {label:'Avg Price', vals:[s1?.avg??0,   s2?.avg??0,   s3?.avg??0]},
-    {label:'Median',    vals:[s1?.median??0,s2?.median??0,s3?.median??0]},
+    {label:'Volume',    axis:'left',  vals:[s1?.count??0, s2?.count??0, s3?.count??0]},
+    {label:'Avg Price', axis:'right', vals:[s1?.avg??0,   s2?.avg??0,   s3?.avg??0]},
+    {label:'Median',    axis:'right', vals:[s1?.median??0,s2?.median??0,s3?.median??0]},
   ];
-  const gBar=groupedBarSVG(periodClusters,{W:620,H:200,labels:[
+  const gBar=groupedBarSVG(periodClusters,{W:640,H:210,labels:[
     `${mlbl(p1[0])}–${mlbl(p1[1])}`,
     `${mlbl(p2[0])}–${mlbl(p2[1])}`,
     `${mlbl(p3[0])}–${mlbl(p3[1])}`
-  ]});
+  ],
+    leftFmt:v=>v>9999?Math.round(v/1000)+'K':fmtN(v),
+    rightFmt:v=>'$'+(v>999?Math.round(v/1000)+'K':Math.round(v))});
 
   // ── Odometer ───────────────────────────────────────────────────────────────
   const withOdo=r1.filter(v=>v.odo>0), noOdo=r1.filter(v=>!v.odo||v.odo<=0);
