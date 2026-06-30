@@ -176,6 +176,14 @@ p { color: var(--text); }
 .nav-dd-menu { position: absolute; top: calc(100% + 6px); left: 0; min-width: 180px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 10px 28px rgba(0,0,0,.14); padding: 6px; display: none; z-index: 120; }
 /* invisible bridge across the gap so hover isn't lost between button and menu */
 .nav-dd-menu::before { content: ''; position: absolute; top: -8px; left: 0; right: 0; height: 8px; }
+
+/* Period comparison color convention (used across all reports/charts):
+   this 60-day period = near-black, previous 60-day = blue, last-year 60-day = orange. */
+:root { --p-cur: #111827; --p-prev: #2563eb; --p-year: #f0a500; }
+[data-theme="dark"] { --p-cur: #e5e7eb; --p-prev: #60a5fa; --p-year: #f5b301; }
+.p-cur { color: var(--p-cur) !important; }
+.p-prev { color: var(--p-prev) !important; }
+.p-year { color: var(--p-year) !important; }
 .nav-dd:hover .nav-dd-menu, .nav-dd.open .nav-dd-menu { display: block; }
 .nav-dd-menu a { display: block; font-size: 13px; color: var(--text-muted); text-decoration: none; padding: 8px 10px; border-radius: 6px; white-space: nowrap; }
 .nav-dd-menu a:hover { background: var(--surface-2); color: var(--accent); }

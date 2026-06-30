@@ -107,6 +107,10 @@ $extra_head = '<meta name="robots" content="noindex, nofollow">
 .donut-legend { flex: 1; }
 .donut-key { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 13px; }
 .donut-swatch { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+/* grouped-bar (period comparison) legend */
+.gbar-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-bottom: 8px; font-size: 12px; color: var(--text-muted); }
+.gbar-key { display: inline-flex; align-items: center; gap: 6px; }
+.gbar-sw { width: 11px; height: 11px; border-radius: 2px; display: inline-block; flex-shrink: 0; }
 
 /* period bar chart */
 .pbar-legend { display: flex; gap: 16px; font-size: 12px; color: var(--text-muted); margin-bottom: 12px; }
@@ -410,8 +414,8 @@ function hBarSVG(items, {W=520, rowH=30, padL=120, padR=85, title2='', maxVal}) 
 function groupedBarSVG(clusters, {W=680, H=200, padL=70, padR=16, padT=24, padB=36, labels=['Last 60d','Prior 60d','Year Ago']}) {
   const plotW=W-padL-padR, plotH=H-padT-padB;
   const n=clusters.length, gW=plotW/n;
-  const bColors=['#f0a500','rgba(240,165,0,.48)','rgba(240,165,0,.22)'];
-  const bStroke=['none','none','#f0a500'];
+  // Period color convention: this 60d (near-black) · prior 60d (blue) · last-year (orange)
+  const bColors=['var(--p-cur)','var(--p-prev)','var(--p-year)'];
   const maxVal=Math.max(...clusters.flatMap(c=>c.vals),1);
 
   // y-axis grid
@@ -429,21 +433,21 @@ function groupedBarSVG(clusters, {W=680, H=200, padL=70, padR=16, padT=24, padB=
       const bh=v?Math.round(v/maxVal*plotH):0;
       const bx=gx+(vi-1)*(bW+gap)-bW/2;
       const by=padT+plotH-bh;
-      return `<rect x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${bW}" height="${bh}" fill="${bColors[vi]}" stroke="${bStroke[vi]}" stroke-width="1" rx="2"/>`;
+      return `<rect x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${bW}" height="${bh}" style="fill:${bColors[vi]}" rx="2"/>`;
     }).join('');
     return `${bs}
     <text x="${gx.toFixed(1)}" y="${H-6}" text-anchor="middle" class="mi-lbl">${cl.label}</text>`;
   }).join('');
 
-  const legend=labels.map((l,i)=>
-    `<rect x="${padL+i*110}" y="${padT-16}" width="10" height="10" fill="${bColors[i]}" stroke="${bStroke[i]}" stroke-width="1" rx="2"/>
-     <text x="${padL+i*110+14}" y="${padT-7}" class="mi-lbl">${l}</text>`).join('');
+  // HTML legend above the chart — wraps cleanly so long date-range labels don't collide.
+  const legend=`<div class="gbar-legend">${labels.map((l,i)=>
+    `<span class="gbar-key"><span class="gbar-sw" style="background:${bColors[i]}"></span>${l}</span>`).join('')}</div>`;
 
-  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;display:block;max-width:${W}px">
+  return `${legend}<svg viewBox="0 0 ${W} ${H}" style="width:100%;display:block;max-width:${W}px">
     ${yTicks}
     <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${padT+plotH}" class="mi-axis"/>
     <line x1="${padL}" y1="${padT+plotH}" x2="${W-padR}" y2="${padT+plotH}" class="mi-axis"/>
-    ${legend}${bars}
+    ${bars}
   </svg>`;
 }
 
@@ -511,8 +515,8 @@ function kpiCard(title,value,sub,key,fmt,s1,s2,s3,filtered,ns1,showVsNat=true){
   };
   // Always show the current-vs-prior-60 and current-vs-same-period-last-year rows.
   let body=`
-      <div class="kpi-cmp"><span>Prior 60 days</span><span><b>${s2?fmt(s2[key]):'—'}</b>${dspan(s1?.[key], s2?.[key])}</span></div>
-      <div class="kpi-cmp"><span>Same period last year</span><span><b>${s3?fmt(s3[key]):'—'}</b>${dspan(s1?.[key], s3?.[key])}</span></div>`;
+      <div class="kpi-cmp"><span class="p-prev">Prior 60 days</span><span><b>${s2?fmt(s2[key]):'—'}</b>${dspan(s1?.[key], s2?.[key])}</span></div>
+      <div class="kpi-cmp"><span class="p-year">Same period last year</span><span><b>${s3?fmt(s3[key]):'—'}</b>${dspan(s1?.[key], s3?.[key])}</span></div>`;
   // When a filter is active, also compare to the national average — except for raw
   // counts, where "X% vs national" is just the subset size and not meaningful.
   if(filtered && showVsNat && s1 && ns1 && ns1[key]){
@@ -743,9 +747,9 @@ function renderPage(V, opts={}) {
         <table class="mi-tbl">
           <thead><tr>
             <th>Metric</th>
-            <th>${mlbl(p1[0])}–${mlbl(p1[1])}</th>
-            <th>${mlbl(p2[0])}–${mlbl(p2[1])}</th>
-            <th>Same Period Last Year<br><span style="font-weight:400;text-transform:none;letter-spacing:0">${mlbl(p3[0])}–${mlbl(p3[1])}</span></th>
+            <th class="p-cur">${mlbl(p1[0])}–${mlbl(p1[1])}</th>
+            <th class="p-prev">${mlbl(p2[0])}–${mlbl(p2[1])}</th>
+            <th class="p-year">Same Period Last Year<br><span style="font-weight:400;text-transform:none;letter-spacing:0">${mlbl(p3[0])}–${mlbl(p3[1])}</span></th>
           </tr></thead>
           <tbody>
             ${pRow('Volume',   s1?.count, s2?.count, s3?.count, fmtN)}
@@ -870,15 +874,13 @@ function renderPage(V, opts={}) {
       <h2>Vehicle Condition Profile</h2>
       <p>How vehicles arrive at auction — and which combinations leave the most money on the table.</p>
     </div>
-    <div class="mi-g2">
-      <div class="mi-card" style="overflow-x:auto">
-        <div class="mi-card-title">Condition Mix — Last 60 Days</div>
-        <table class="mi-tbl" id="cond-profile-tbl"></table>
-      </div>
-      <div class="mi-card">
-        <div class="mi-card-title">Problem Combinations</div>
-        <table class="mi-tbl" id="cond-combo-tbl"></table>
-      </div>
+    <div class="mi-card" style="margin-bottom:16px">
+      <div class="mi-card-title">Condition Mix — 60-Day Trend</div>
+      <table class="mi-tbl" id="cond-profile-tbl"></table>
+    </div>
+    <div class="mi-card">
+      <div class="mi-card-title">Problem Combinations — Last 60 Days</div>
+      <table class="mi-tbl" id="cond-combo-tbl"></table>
     </div>
 
     <!-- Mileage impact calculator -->
@@ -1067,40 +1069,44 @@ function renderPage(V, opts={}) {
     return `<span class="${d>=0?'dp':'dn'}">${d>=0?'+':''}${fmtD(d)}</span>`;
   };
 
-  // individual conditions
-  const cHasKey  = r1.filter(v=>v.has_key);
-  const cNoKey   = r1.filter(v=>v.no_key);
-  const cUnkKey  = r1.filter(v=>!v.has_key&&!v.no_key);
-  const cStarts  = r1.filter(v=>v.starts);
-  const cNoStart = r1.filter(v=>!v.starts);
-  const cHasOdo  = r1.filter(v=>v.odo>0);
-  const cNoOdo   = r1.filter(v=>!v.odo||v.odo<=0);
-
-  const profileRows = [
-    ['Has Key',         cHasKey,  s1],
-    ['No Key',          cNoKey,   s1],
-    ['Key Unknown',     cUnkKey,  s1],
-    ['Starts',          cStarts,  s1],
-    ['Does Not Start',  cNoStart, s1],
-    ['Mileage Known',   cHasOdo,  s1],
-    ['No Mileage',      cNoOdo,   s1],
+  // Condition definitions, scored as a share of each period (this 60d / prior 60d / last-yr 60d)
+  // so the mix trend is visible. Colors follow the site convention (black / blue / orange).
+  const condDefs = [
+    ['Has Key',        v=>v.has_key],
+    ['No Key',         v=>v.no_key],
+    ['Key Unknown',    v=>!v.has_key&&!v.no_key],
+    ['Starts',         v=>v.starts],
+    ['Does Not Start', v=>!v.starts],
+    ['Mileage Known',  v=>v.odo>0],
+    ['No Mileage',     v=>!v.odo||v.odo<=0],
   ];
+  const shr  = (recs,pred) => recs.length ? (100*recs.filter(pred).length/recs.length) : null;
+  const trnd = (cur,base) => {
+    if(cur==null||base==null) return '';
+    const d=cur-base; if(Math.abs(d)<0.05) return '';
+    return ` <span class="${d>0?'dp':'dn'}" style="font-size:10px">${d>0?'▲':'▼'}${Math.abs(d).toFixed(1)}</span>`;
+  };
 
   const profTbl = document.getElementById('cond-profile-tbl');
   if (profTbl) {
     profTbl.innerHTML = `
       <thead><tr>
-        <th>Condition</th><th># Vehicles</th><th>% of Total</th><th>Avg Price</th><th>vs Overall</th>
+        <th>Condition</th>
+        <th class="p-cur">This 60 days</th>
+        <th class="p-prev">Prior 60 days</th>
+        <th class="p-year">Same period last yr</th>
+        <th>Avg Price (now)</th>
       </tr></thead>
-      <tbody>${profileRows.map(([lbl,recs,base])=>{
-        const st=stats(recs);
-        return st ? `<tr>
+      <tbody>${condDefs.map(([lbl,pred])=>{
+        const a=shr(r1,pred), b=shr(r2,pred), c=shr(r3,pred);
+        const av=stats(r1.filter(pred));
+        return `<tr>
           <td>${lbl}</td>
-          <td>${fmtN(st.count)}</td>
-          <td>${p(st.count)}</td>
-          <td>${fmtD(st.avg)}</td>
-          <td>${dp(st,base)}</td>
-        </tr>` : '';
+          <td class="p-cur" style="font-weight:600">${a!=null?a.toFixed(1)+'%':'—'}</td>
+          <td class="p-prev">${b!=null?b.toFixed(1)+'%':'—'}${trnd(a,b)}</td>
+          <td class="p-year">${c!=null?c.toFixed(1)+'%':'—'}${trnd(a,c)}</td>
+          <td>${av?fmtD(av.avg):'—'}</td>
+        </tr>`;
       }).join('')}</tbody>`;
   }
 
