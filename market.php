@@ -21,14 +21,18 @@ $extra_head = '<meta name="robots" content="noindex, nofollow">
 .mi-section { margin: 40px 0 16px; }
 .mi-section h2 { font-size: 1.15rem; font-weight: 700; margin-bottom: 4px; }
 .mi-section p  { font-size: 13px; color: var(--text-muted); }
-/* collapsible section (buyer-premium calculators) */
-.mi-collapse > summary { list-style: none; cursor: pointer; }
-.mi-collapse > summary::-webkit-details-marker { display: none; }
-.mi-collapse > summary h2 { display: inline; }
-.mi-collapse-ico { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border: 1px solid var(--border); border-radius: 6px; font-size: 17px; font-weight: 700; line-height: 1; color: var(--accent); margin-right: 10px; vertical-align: middle; transition: border-color .15s; }
-.mi-collapse-ico::before { content: "+"; }
-.mi-collapse[open] .mi-collapse-ico::before { content: "\2212"; }
-.mi-collapse > summary:hover .mi-collapse-ico { border-color: var(--accent); }
+/* buyer-premium reveal toggle — the "your take" figures are hidden until the + is clicked */
+.ic-toprow { display: flex; justify-content: flex-end; margin-bottom: 6px; }
+.prem-btn { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px; font-weight: 600; color: var(--text-muted); border: 1px solid var(--border); border-radius: 7px; padding: 5px 11px; transition: border-color .15s, color .15s; }
+.prem-btn:hover { border-color: var(--accent); color: var(--accent); }
+.prem-ico { display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px; border-radius: 4px; background: var(--accent); color: #000; font-weight: 800; font-size: 13px; line-height: 1; }
+.prem-ico::before { content: "+"; }
+.ic-premium { display: none !important; }
+.ic-card .ic-boxes { grid-template-columns: repeat(2,1fr); }
+.prem-cb:checked ~ .ic-toprow .prem-ico::before { content: "\2212"; }
+.prem-cb:checked ~ .ic-grid .ic-box.ic-premium { display: block !important; }
+.prem-cb:checked ~ .ic-grid .mi-insight.ic-premium { display: flex !important; }
+.prem-cb:checked ~ .ic-grid .ic-boxes { grid-template-columns: repeat(3,1fr); }
 
 .mi-card {
   background: var(--surface); border: 1px solid var(--border);
@@ -902,14 +906,14 @@ function renderPage(V, opts={}) {
       <table class="mi-tbl" id="cond-combo-tbl"></table>
     </div>
 
-    <!-- Buyer-premium revenue calculators (collapsed by default; click + to expand) -->
-    <details class="mi-collapse">
-      <summary class="mi-section">
-        <h2><span class="mi-collapse-ico"></span>Buyer Premium — Revenue Impact</h2>
-        <p>Mileage, key &amp; starts revenue projections. Hidden by default — expand when you need it.</p>
-      </summary>
-      <div style="margin-top:16px">
-    <div class="mi-card" style="margin-bottom:16px">
+    <!-- Buyer premium revenue calculators -->
+    <div class="mi-section">
+      <h2>Buyer Premium — Revenue Impact</h2>
+      <p>What would have happened to buyer premium revenue if more vehicles had a confirmed odometer reading? Your premium figures are hidden — click <strong>+ My premium</strong> to reveal them.</p>
+    </div>
+    <div class="mi-card ic-card" style="margin-bottom:16px;position:relative">
+      <input type="checkbox" id="prem-odo" class="prem-cb" hidden>
+      <div class="ic-toprow"><label for="prem-odo" class="prem-btn"><span class="prem-ico"></span> My premium</label></div>
       <div class="ic-grid">
 
         <!-- Left: current state -->
@@ -954,7 +958,7 @@ function renderPage(V, opts={}) {
               <div class="ic-box-val" id="ic-add-value">—</div>
               <div class="ic-box-lbl">Additional sale<br>value</div>
             </div>
-            <div class="ic-box ic-highlight">
+            <div class="ic-box ic-highlight ic-premium">
               <div class="ic-box-val" id="ic-add-revenue">—</div>
               <div class="ic-box-lbl">Your buyer<br>premium</div>
             </div>
@@ -970,19 +974,21 @@ function renderPage(V, opts={}) {
               <div class="ic-box-val" id="ic-add-value-yr">—</div>
               <div class="ic-box-lbl">Additional sale<br>value / year</div>
             </div>
-            <div class="ic-box ic-highlight">
+            <div class="ic-box ic-highlight ic-premium">
               <div class="ic-box-val" id="ic-add-revenue-yr">—</div>
               <div class="ic-box-lbl">Your premium<br>per year</div>
             </div>
           </div>
 
-          <div class="mi-insight" style="margin-top:14px" id="ic-note"></div>
+          <div class="mi-insight ic-premium" style="margin-top:14px" id="ic-note"></div>
         </div>
       </div>
     </div>
 
     <!-- Key + Starts impact -->
-    <div class="mi-card" style="margin-bottom:16px">
+    <div class="mi-card ic-card" style="margin-bottom:16px;position:relative">
+      <input type="checkbox" id="prem-ks" class="prem-cb" hidden>
+      <div class="ic-toprow"><label for="prem-ks" class="prem-btn"><span class="prem-ico"></span> My premium</label></div>
       <div class="ic-grid">
         <div>
           <div class="mi-card-title">Current State — Key &amp; Starts (Last 60 Days)</div>
@@ -1023,7 +1029,7 @@ function renderPage(V, opts={}) {
               <div class="ic-box-val" id="ks-add-value">—</div>
               <div class="ic-box-lbl">Additional sale<br>value</div>
             </div>
-            <div class="ic-box ic-highlight">
+            <div class="ic-box ic-highlight ic-premium">
               <div class="ic-box-val" id="ks-add-revenue">—</div>
               <div class="ic-box-lbl">Your buyer<br>premium</div>
             </div>
@@ -1039,18 +1045,16 @@ function renderPage(V, opts={}) {
               <div class="ic-box-val" id="ks-add-value-yr">—</div>
               <div class="ic-box-lbl">Additional sale<br>value / year</div>
             </div>
-            <div class="ic-box ic-highlight">
+            <div class="ic-box ic-highlight ic-premium">
               <div class="ic-box-val" id="ks-add-revenue-yr">—</div>
               <div class="ic-box-lbl">Your premium<br>per year</div>
             </div>
           </div>
 
-          <div class="mi-insight" style="margin-top:14px" id="ks-note"></div>
+          <div class="mi-insight ic-premium" style="margin-top:14px" id="ks-note"></div>
         </div>
       </div>
     </div>
-      </div>
-    </details>
 
     <!-- 12-month trend -->
     <div class="mi-section">
