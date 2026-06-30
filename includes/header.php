@@ -38,18 +38,29 @@
     <div style="display:flex;align-items:center;gap:14px;">
       <nav style="display:flex;gap:2px;flex-wrap:wrap;" id="site-nav">
         <?php
-          $nav_links = [
-            '/'                    => 'Valuation',
-            '/autura-market-report'=> 'Market Report',
-            '/customer-results'    => 'Customer Results',
-            '/changelog'           => 'Changelog',
-            '/update'              => 'Update Data',
-          ];
           $current_path = strtok($_SERVER['REQUEST_URI'], '?');
-          foreach ($nav_links as $href => $label):
-            $is_active = ($current_path === $href);
+          $top_links = [
+            '/'                     => 'Valuation',
+            '/autura-market-report' => 'Market Report',
+            '/customer-results'     => 'Seller-Results',
+          ];
+          $menus = [
+            'Cust Data' => ['/customer-research' => 'Customer Research', '/impound-map' => 'Impound Map'],
+            'Settings'  => ['/changelog' => 'Changelog', '/update' => 'Update Data'],
+          ];
+          foreach ($top_links as $href => $label):
         ?>
-        <a href="<?= $href ?>" style="font-size:13px;font-weight:<?= $is_active ? '700' : '500' ?>;color:<?= $is_active ? 'var(--text)' : 'var(--text-muted)' ?>;text-decoration:none;padding:6px 10px;border-radius:6px;transition:color .15s;white-space:nowrap;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='<?= $is_active ? 'var(--text)' : 'var(--text-muted)' ?>'"><?= $label ?></a>
+        <a href="<?= $href ?>" class="nav-top<?= $current_path === $href ? ' on' : '' ?>"><?= $label ?></a>
+        <?php endforeach; ?>
+        <?php foreach ($menus as $name => $items): $anyActive = in_array($current_path, array_keys($items), true); ?>
+        <span class="nav-dd">
+          <button type="button" class="nav-dd-btn<?= $anyActive ? ' on' : '' ?>"><?= $name ?> <span style="font-size:9px">▾</span></button>
+          <span class="nav-dd-menu">
+            <?php foreach ($items as $href => $label): ?>
+            <a href="<?= $href ?>" class="<?= $current_path === $href ? 'on' : '' ?>"><?= $label ?></a>
+            <?php endforeach; ?>
+          </span>
+        </span>
         <?php endforeach; ?>
       </nav>
       <span style="font-size:11px;font-weight:600;background:var(--accent-glow);color:var(--accent);border:1px solid rgba(240,165,0,.3);border-radius:4px;padding:2px 8px;letter-spacing:.04em;">BETA</span>
@@ -78,6 +89,18 @@
       localStorage.setItem('amr-theme', 'dark');
     }
   });
+})();
+(function(){
+  var btns = document.querySelectorAll('.nav-dd-btn');
+  btns.forEach(function(b){
+    b.addEventListener('click', function(e){
+      e.stopPropagation();
+      var dd = b.closest('.nav-dd'), open = dd.classList.contains('open');
+      document.querySelectorAll('.nav-dd').forEach(function(d){ d.classList.remove('open'); });
+      if (!open) dd.classList.add('open');
+    });
+  });
+  document.addEventListener('click', function(){ document.querySelectorAll('.nav-dd').forEach(function(d){ d.classList.remove('open'); }); });
 })();
 </script>
 

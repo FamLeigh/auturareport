@@ -4,3 +4,10 @@ data/amr-data.json
 data/amr-meta.json
 data/access-log.json
 data/users.json
+data/impound-sold.json
+data/impound-removed.json
+data/impound-nottarget.json
+data/_backups/
+data/impound-aliases.json
+data/impound-memos.json
+assets/csvs/

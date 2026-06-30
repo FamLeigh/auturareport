@@ -10,8 +10,8 @@ $amr_meta      = file_exists(__DIR__ . '/data/amr-meta.json') ? json_decode(file
 $amr_data_date = $amr_meta['data_date'] ?? '';
 $cr_payload    = $cr_ok ? amr_customer_payload() : '{"months":[],"customers":[],"dataDate":""}';
 
-$page_title = 'Customer Results';
-$meta_desc  = 'Customer Results — first auction, sold by month, and potential churn.';
+$page_title = 'Seller-Results';
+$meta_desc  = 'Seller-Results — first auction, sold by month, and potential churn.';
 $body_class = 'page-customer';
 $canonical  = '/customer-results';
 $extra_head = '<meta name="robots" content="noindex, nofollow">';
@@ -24,7 +24,7 @@ include __DIR__ . '/includes/header.php';
     <p style="font-size:12px;margin-bottom:10px;">
       <a href="/" style="color:var(--text-muted);text-decoration:none;">&larr; Valuation Tool</a>
     </p>
-    <h1>Customer Results</h1>
+    <h1>Seller-Results</h1>
     <p class="cr-sub">
       <?php if ($amr_data_date): ?>Dataset: <strong><?= h($amr_data_date) ?></strong> &nbsp;&middot;&nbsp; <?php endif; ?>
       Seller-level activity: first auction, sold by month, 90-day activity, and potential churn.
@@ -35,10 +35,10 @@ include __DIR__ . '/includes/header.php';
 
   <form class="cr-gate" method="POST" autocomplete="off">
     <h2>Access code required</h2>
-    <p>Enter the 4-digit code to view Customer Results.</p>
+    <p>Enter the 4-digit code to view Seller-Results.</p>
     <?php if ($cr_error): ?><div class="err"><?= h($cr_error) ?></div><?php endif; ?>
-    <input class="cr-code-input" type="text" name="cr_code" inputmode="numeric" pattern="[0-9]*"
-           maxlength="4" placeholder="••••" autofocus required>
+    <input class="cr-code-input" type="password" name="cr_code" inputmode="numeric" pattern="[0-9]*"
+           maxlength="4" placeholder="••••" autocomplete="off" autofocus required>
     <button type="submit">Unlock</button>
   </form>
 

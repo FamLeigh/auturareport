@@ -165,6 +165,20 @@ p { color: var(--text); }
 }
 .site-header.scrolled { border-color: var(--border); }
 
+/* ── Top nav links + dropdown menus ─────────────────────────────────────────── */
+.nav-top { font-size: 13px; font-weight: 500; color: var(--text-muted); text-decoration: none; padding: 6px 10px; border-radius: 6px; white-space: nowrap; transition: color var(--trans); }
+.nav-top:hover { color: var(--accent); }
+.nav-top.on { font-weight: 700; color: var(--text); }
+.nav-dd { position: relative; display: inline-block; }
+.nav-dd-btn { font: inherit; font-size: 13px; font-weight: 500; color: var(--text-muted); background: none; border: none; padding: 6px 10px; border-radius: 6px; cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; }
+.nav-dd-btn:hover, .nav-dd-btn.on { color: var(--accent); }
+.nav-dd-btn.on { font-weight: 700; }
+.nav-dd-menu { position: absolute; top: calc(100% + 4px); left: 0; min-width: 180px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 10px 28px rgba(0,0,0,.14); padding: 6px; display: none; z-index: 120; }
+.nav-dd:hover .nav-dd-menu, .nav-dd.open .nav-dd-menu { display: block; }
+.nav-dd-menu a { display: block; font-size: 13px; color: var(--text-muted); text-decoration: none; padding: 8px 10px; border-radius: 6px; white-space: nowrap; }
+.nav-dd-menu a:hover { background: var(--surface-2); color: var(--accent); }
+.nav-dd-menu a.on { color: var(--accent); font-weight: 600; }
+
 .nav-inner {
   max-width: var(--max-w);
   margin: 0 auto;
