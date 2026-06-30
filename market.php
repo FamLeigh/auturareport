@@ -21,6 +21,14 @@ $extra_head = '<meta name="robots" content="noindex, nofollow">
 .mi-section { margin: 40px 0 16px; }
 .mi-section h2 { font-size: 1.15rem; font-weight: 700; margin-bottom: 4px; }
 .mi-section p  { font-size: 13px; color: var(--text-muted); }
+/* collapsible section (buyer-premium calculators) */
+.mi-collapse > summary { list-style: none; cursor: pointer; }
+.mi-collapse > summary::-webkit-details-marker { display: none; }
+.mi-collapse > summary h2 { display: inline; }
+.mi-collapse-ico { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border: 1px solid var(--border); border-radius: 6px; font-size: 17px; font-weight: 700; line-height: 1; color: var(--accent); margin-right: 10px; vertical-align: middle; transition: border-color .15s; }
+.mi-collapse-ico::before { content: "+"; }
+.mi-collapse[open] .mi-collapse-ico::before { content: "\2212"; }
+.mi-collapse > summary:hover .mi-collapse-ico { border-color: var(--accent); }
 
 .mi-card {
   background: var(--surface); border: 1px solid var(--border);
@@ -894,11 +902,13 @@ function renderPage(V, opts={}) {
       <table class="mi-tbl" id="cond-combo-tbl"></table>
     </div>
 
-    <!-- Mileage impact calculator -->
-    <div class="mi-section">
-      <h2>Mileage Reporting — Revenue Impact</h2>
-      <p>What would have happened to buyer premium revenue if more vehicles had a confirmed odometer reading?</p>
-    </div>
+    <!-- Buyer-premium revenue calculators (collapsed by default; click + to expand) -->
+    <details class="mi-collapse">
+      <summary class="mi-section">
+        <h2><span class="mi-collapse-ico"></span>Buyer Premium — Revenue Impact</h2>
+        <p>Mileage, key &amp; starts revenue projections. Hidden by default — expand when you need it.</p>
+      </summary>
+      <div style="margin-top:16px">
     <div class="mi-card" style="margin-bottom:16px">
       <div class="ic-grid">
 
@@ -1039,6 +1049,8 @@ function renderPage(V, opts={}) {
         </div>
       </div>
     </div>
+      </div>
+    </details>
 
     <!-- 12-month trend -->
     <div class="mi-section">

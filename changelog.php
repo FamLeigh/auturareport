@@ -2,6 +2,7 @@
 require_once __DIR__ . '/includes/auth.php';
 
 $ENTRIES = [
+    ['v1.26 Beta', 'June 30, 2026', 'Market Report: the Buyer Premium — Revenue Impact section (mileage and key/starts projections) is now collapsed by default with a + toggle to expand it when needed.'],
     ['v1.25 Beta', 'June 30, 2026', 'Buyer Market Report gains Region / Seller / Group filters (same as the Market Report). Pick a seller to see exactly who buys their inventory — every view (geography, segments, top buyers, supply→demand) re-slices to the selection.'],
     ['v1.24 Beta', 'June 30, 2026', 'The home page is now a dashboard with six headline metrics: total sales, total sellers, and total winners (unique buyers) over the past 18 months, plus average sale price split by mileage known/unknown, keys/no keys, and starts/does-not-start. The valuation tool moved to its own page, “Autura Valuation Tool,” at /autura-valuation-tool.'],
     ['v1.23 Beta', 'June 30, 2026', 'New Buyer Market Report (Cust Data → Buyer Report, access-code gated): who buys Autura Marketplace inventory. Four views — Geography (buyers by state choropleth + top states/cities), Segments (volume, spend, and avg price by buyer type with top makes), Top Buyers (leaderboard with buyer concentration), and Supply → Demand (seller-region to buyer-state flow). Populated once the new buyer-detail export is imported.'],
