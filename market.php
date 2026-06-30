@@ -10,6 +10,7 @@ $amr_data_version = file_exists(__DIR__ . '/data/amr-data.json') ? filemtime(__D
 $amr_meta         = file_exists(__DIR__ . '/data/amr-meta.json') ? json_decode(file_get_contents(__DIR__ . '/data/amr-meta.json'), true) : [];
 $amr_data_date    = $amr_meta['data_date'] ?? '';
 $amr_record_count = (int)($amr_meta['count'] ?? 0);
+$amr_groups       = file_exists(__DIR__ . '/data/seller-groups.json') ? (json_decode(file_get_contents(__DIR__ . '/data/seller-groups.json'), true) ?: []) : [];
 
 $extra_head = '<meta name="robots" content="noindex, nofollow">
 <style>
@@ -262,6 +263,7 @@ include __DIR__ . '/includes/header.php';
       <span class="mi-filter-lbl">Filter</span>
       <div class="mi-ms" id="ms-region"></div>
       <div class="mi-ms" id="ms-seller"></div>
+      <div class="mi-ms" id="ms-group"></div>
       <button type="button" class="mi-ms-reset" id="mi-filter-reset" hidden>Clear all</button>
       <span class="mi-region-hint" id="mi-region-hint"></span>
     </div>
@@ -283,6 +285,7 @@ include __DIR__ . '/includes/header.php';
 <script>
 const AMR_DATA_DATE  = '<?= h($amr_data_date) ?>';
 const AMR_RECORD_CNT = <?= $amr_record_count ?>;
+const GROUPS = <?= json_encode($amr_groups, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE) ?: '{}' ?>;
 const $    = id => document.getElementById(id);
 const fmtD = n  => '$' + Math.round(n).toLocaleString();
 const fmtN = n  => Math.round(n).toLocaleString();
@@ -565,10 +568,11 @@ const dFmt = (d,pos='<span class="iup">',neg='<span class="idn">') =>
 
 // ── Main render ────────────────────────────────────────────────────────────────
 function renderPage(V, opts={}) {
-  const { filtered=false, allV=V, regions=[], sellers=[] } = opts;
-  // Human-readable label for the active selection (pooled regions + sellers).
+  const { filtered=false, allV=V, regions=[], sellers=[], groups=[] } = opts;
+  // Human-readable label for the active selection (pooled regions + sellers + groups).
   const selLabel = (()=>{
     const parts=[];
+    if(groups.length)  parts.push(groups.length===1?groups[0]:`${groups.length} groups`);
     if(regions.length) parts.push(regions.length===1?regionOpt(regions[0]):`${regions.length} regions`);
     if(sellers.length) parts.push(sellers.length===1?sellers[0]:`${sellers.length} sellers`);
     return parts.join(' + ') || 'Selection';
@@ -1189,16 +1193,18 @@ function makeMultiSelect({mountId, label, items, onChange}) {
 }
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
-let ALL_V = [], msRegion, msSeller;
+let ALL_V = [], msRegion, msSeller, msGroup;
 function applyFilters() {
-  const rs = msRegion.get(), ss = msSeller.get();
-  const filtered = rs.size>0 || ss.size>0;
+  const rs = msRegion.get(), ss = msSeller.get(), gs = msGroup ? msGroup.get() : new Set();
+  let groupSellers = null;
+  if (gs.size>0) { groupSellers = new Set(); gs.forEach(g => (GROUPS[g]||[]).forEach(s => groupSellers.add(s))); }
+  const filtered = rs.size>0 || ss.size>0 || gs.size>0;
   const V = filtered
-    ? ALL_V.filter(v=>(rs.size===0||rs.has(v.region)) && (ss.size===0||ss.has(v.seller)))
+    ? ALL_V.filter(v => (rs.size===0||rs.has(v.region)) && (ss.size===0||ss.has(v.seller)) && (!groupSellers||groupSellers.has(v.seller)))
     : ALL_V;
   const reset=$('mi-filter-reset'); if(reset) reset.hidden=!filtered;
   const h=$('mi-region-hint'); if(h) h.textContent = filtered ? 'Deltas shown vs national average' : '';
-  renderPage(V, { filtered, allV:ALL_V, regions:[...rs], sellers:[...ss] });
+  renderPage(V, { filtered, allV:ALL_V, regions:[...rs], sellers:[...ss], groups:[...gs] });
 }
 (async()=>{
   try {
@@ -1228,8 +1234,15 @@ function applyFilters() {
     msRegion=makeMultiSelect({mountId:'ms-region', label:'Region', items:rItems, onChange:onRegionChange});
     msSeller=makeMultiSelect({mountId:'ms-seller', label:'Seller', items:Object.keys(sc).sort((a,b)=>sc[b]-sc[a]).map(s=>({value:s,label:s,count:sc[s]})), onChange:applyFilters});
 
+    // Group filter — only shown when seller groups have been defined (Settings → Define Seller Groups).
+    const groupNames=Object.keys(GROUPS||{});
+    if(groupNames.length){
+      const gItems=groupNames.sort().map(g=>{ const mem=new Set(GROUPS[g]); return {value:g,label:g,count:ALL_V.reduce((n,v)=>n+(mem.has(v.seller)?1:0),0)}; });
+      msGroup=makeMultiSelect({mountId:'ms-group', label:'Group', items:gItems, onChange:applyFilters});
+    }
+
     const reset=$('mi-filter-reset');
-    if(reset) reset.addEventListener('click', ()=>{ msRegion.clear(); msSeller.clear(); msSeller.update(sellerItems()); applyFilters(); });
+    if(reset) reset.addEventListener('click', ()=>{ msRegion.clear(); msSeller.clear(); if(msGroup) msGroup.clear(); msSeller.update(sellerItems()); applyFilters(); });
     // Close any open popover when clicking elsewhere.
     document.addEventListener('click', ()=>document.querySelectorAll('.mi-ms-pop').forEach(p=>p.hidden=true));
 

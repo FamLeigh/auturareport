@@ -2,6 +2,7 @@
 require_once __DIR__ . '/includes/auth.php';
 
 $ENTRIES = [
+    ['v1.19 Beta', 'June 30, 2026', 'Seller Groups. New Settings → Define Seller Groups page to create named groups and assign sellers to them. The Market Report gains a Group filter (appears once groups are defined) that filters to the pooled sellers of the selected group(s), alongside Region and Seller.'],
     ['v1.18 Beta', 'June 30, 2026', 'Navigation reorg + two reports promoted. "Customer Results" renamed to Seller-Results. New "Cust Data" menu (Customer Research, Impound Map) and "Settings" menu (Changelog, Update Data). The access-code (PIN) field is now masked. Market Report KPI pills show current / prior-60 / same-period-last-year values.'],
     ['v1.17 Beta', 'June 16, 2026', 'Market Report: the Seller filter now lists only sellers from the selected Region(s) — pick a region and the Seller dropdown narrows to that region\'s sellers (and resets to all when the region is cleared).'],
     ['v1.16 Beta', 'June 12, 2026', 'Per-user passwords. The shared access password is now a one-time bootstrap: on first sign-in you set your own password (stored hashed, server-side) and use it from then on — the default no longer works for you afterward. Existing users are prompted to set a password on their next login.'],
