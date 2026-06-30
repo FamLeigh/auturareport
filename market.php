@@ -678,7 +678,9 @@ function renderPage(V, opts={}) {
   const nat1 = filtered ? allV.filter(v=>inP(v,p1)) : r1;
   const nWithOdo=stats(nat1.filter(v=>v.odo>0)), nNoOdo=stats(nat1.filter(v=>!v.odo||v.odo<=0));
   const natOdoPrem=(nWithOdo&&nNoOdo)?nWithOdo.avg-nNoOdo.avg:0;
-  const odoUsesNat = !(stWithOdo && stWithOdo.count>=10 && odoPrem>0);
+  // When a filter is active, base the per-car premium on the national market value
+  // of mileage (a small/low-reporting seller's own premium is noisy or zero).
+  const odoUsesNat = filtered && natOdoPrem>0;
   const odoPremCalc = odoUsesNat ? natOdoPrem : odoPrem;
   const odoPremPct=(stNoOdo&&stNoOdo.avg)?(odoPremCalc/stNoOdo.avg*100):0;
 
@@ -701,7 +703,7 @@ function renderPage(V, opts={}) {
   const fullPrem=(stBest&&stWorst)?stBest.avg-stWorst.avg:null;
   const nBest=stats(nat1.filter(v=>v.has_key&&v.starts)), nWorst=stats(nat1.filter(v=>v.no_key&&!v.starts));
   const natFullPrem=(nBest&&nWorst)?nBest.avg-nWorst.avg:0;
-  const ksUsesNat = !(stBest && stBest.count>=10 && fullPrem>0);
+  const ksUsesNat = filtered && natFullPrem>0;
   const fullPremCalc = ksUsesNat ? natFullPrem : (fullPrem||0);
 
   // ── Doc mix ────────────────────────────────────────────────────────────────
@@ -936,7 +938,7 @@ function renderPage(V, opts={}) {
           </div>
           <div class="ic-stat">
             <span class="ic-big">${fmtD(odoPremCalc)}</span>
-            <span class="ic-desc">avg sale premium when mileage is known vs unknown${odoUsesNat&&filtered?' <em>(national average — this seller has little/no mileage on record)</em>':''}</span>
+            <span class="ic-desc">avg sale premium when mileage is known vs unknown${odoUsesNat?' <em>(national per-car average — applied to this selection\'s volume)</em>':''}</span>
           </div>
           <div class="ic-stat">
             <span class="ic-big">11.5%</span>
@@ -1009,7 +1011,7 @@ function renderPage(V, opts={}) {
           </div>
           <div class="ic-stat">
             <span class="ic-big">${fmtD(fullPremCalc)}</span>
-            <span class="ic-desc">avg premium: has key + starts vs no key + no start${ksUsesNat&&filtered?' <em>(national average)</em>':''}</span>
+            <span class="ic-desc">avg premium: has key + starts vs no key + no start${ksUsesNat?' <em>(national per-car average)</em>':''}</span>
           </div>
           <div class="ic-stat">
             <span class="ic-big">11.5%</span>
