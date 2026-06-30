@@ -6,19 +6,44 @@ $groups_file = __DIR__ . '/data/seller-groups.json';
 
 // ── Save the full groups map (AJAX) ───────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_groups'])) {
-    $in = json_decode((string) $_POST['save_groups'], true);
-    $clean = [];
-    if (is_array($in)) {
-        foreach ($in as $name => $members) {
-            $name = trim((string) $name);
-            if ($name === '' || !is_array($members)) continue;
-            $m = array_values(array_unique(array_filter(array_map(fn($s) => trim((string) $s), $members), fn($s) => $s !== '')));
-            $clean[$name] = $m;
-        }
-    }
-    file_put_contents($groups_file, json_encode($clean, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE));
     header('Content-Type: application/json');
-    echo json_encode(['ok' => true]);
+    $raw = (string) $_POST['save_groups'];
+    $in  = json_decode($raw, true);
+
+    // Never overwrite on a missing/empty/malformed payload (this was the wipe bug).
+    if ($raw === '' || !is_array($in)) {
+        echo json_encode(['ok' => false, 'error' => 'invalid', 'message' => 'Invalid request — nothing saved.']);
+        exit;
+    }
+
+    $clean = [];
+    foreach ($in as $name => $members) {
+        $name = trim((string) $name);
+        if ($name === '' || !is_array($members)) continue;
+        $m = array_values(array_unique(array_filter(array_map(fn($s) => trim((string) $s), $members), fn($s) => $s !== '')));
+        $clean[$name] = $m;
+    }
+
+    $existing = file_exists($groups_file) ? (json_decode(file_get_contents($groups_file), true) ?: []) : [];
+    // Refuse to clear all groups unless the client explicitly confirms.
+    if (empty($clean) && !empty($existing) && empty($_POST['confirm_empty'])) {
+        echo json_encode(['ok' => false, 'error' => 'refused-empty', 'message' => 'Refusing to remove all groups without confirmation.']);
+        exit;
+    }
+
+    // Back up the current file before changing it.
+    if (!empty($existing)) {
+        @mkdir(__DIR__ . '/data/_backups', 0775, true);
+        @copy($groups_file, __DIR__ . '/data/_backups/seller-groups.' . date('Ymd-His') . '.json');
+    }
+
+    $fp = fopen($groups_file, 'c+');
+    if ($fp && flock($fp, LOCK_EX)) {
+        ftruncate($fp, 0); rewind($fp);
+        fwrite($fp, json_encode($clean, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE));
+        flock($fp, LOCK_UN); fclose($fp);
+    }
+    echo json_encode(['ok' => true, 'count' => count($clean)]);
     exit;
 }
 
@@ -180,12 +205,19 @@ document.addEventListener('change', e => {
   if (cb.checked) set.add(cb.dataset.seller); else set.delete(cb.dataset.seller);
   GROUPS[selected] = [...set]; setDirty(true); renderGroups();
 });
-document.getElementById('sg-save').addEventListener('click', () => {
-  document.getElementById('sg-status').textContent = 'Saving…';
-  fetch(location.pathname, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:'save_groups='+encodeURIComponent(JSON.stringify(GROUPS)) })
-    .then(r=>r.json()).then(d=>{ if(d&&d.ok){ setDirty(false); document.getElementById('sg-status').textContent='Saved ✓'; setTimeout(()=>{ if(!dirty) document.getElementById('sg-status').textContent=''; }, 2000); } else throw 0; })
-    .catch(()=>{ document.getElementById('sg-status').textContent='Save failed'; });
-});
+function doSave(confirmEmpty){
+  const st = document.getElementById('sg-status'); st.textContent = 'Saving…';
+  let body = 'save_groups=' + encodeURIComponent(JSON.stringify(GROUPS));
+  if (confirmEmpty) body += '&confirm_empty=1';
+  fetch(location.pathname, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body })
+    .then(r=>r.json()).then(d=>{
+      if (d && d.ok) { setDirty(false); st.textContent = 'Saved ✓'; setTimeout(()=>{ if(!dirty) st.textContent=''; }, 2000); }
+      else if (d && d.error === 'refused-empty') { if (confirm('This will remove ALL seller groups. Are you sure?')) doSave(true); else st.textContent = 'Not saved'; }
+      else { st.textContent = (d && d.message) ? d.message : 'Save failed — not saved'; }
+    })
+    .catch(()=>{ st.textContent = 'Save failed — not saved'; });
+}
+document.getElementById('sg-save').addEventListener('click', ()=>doSave(false));
 window.addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); e.returnValue=''; } });
 
 render();
