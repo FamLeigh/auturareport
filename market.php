@@ -44,6 +44,10 @@ $extra_head = '<meta name="robots" content="noindex, nofollow">
 .kpi-d.pos { color: #2e8a4c; } [data-theme="dark"] .kpi-d.pos { color: #5ec97c; }
 .kpi-d.neg { color: #b83232; } [data-theme="dark"] .kpi-d.neg { color: #e05a5a; }
 .kpi-d.neu { color: var(--text-muted); }
+.kpi-cmp { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-size: 12px; color: var(--text-muted); margin-top: 8px; }
+.kpi-cmp:first-of-type { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); }
+.kpi-cmp b { color: var(--text); font-weight: 700; font-variant-numeric: tabular-nums; }
+.kpi-cmp .kpi-d { font-size: 11px; margin: 0 0 0 6px; }
 
 /* tables */
 .mi-tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -496,11 +500,22 @@ function pRow(lbl,v1,v2,v3,fn) {
 }
 function sRow(lbl,v1,v2,v3){return `<tr><td>${lbl}</td><td>${v1??'—'}</td><td>${v2??'—'}</td><td>${v3??'—'}</td></tr>`;}
 
-function kpiCard(title,value,sub,s1,s2,key,cmpLabel){
-  cmpLabel = cmpLabel || 'vs prior 60d';
-  let dh='';
-  if(s1&&s2&&s2[key]){const d=(s1[key]-s2[key])/s2[key]*100;const cls=d>0?'pos':d<0?'neg':'neu';dh=`<div class="kpi-d ${cls}">${d>0?'▲':d<0?'▼':'–'}${Math.abs(d).toFixed(1)}% ${cmpLabel}</div>`;}
-  return `<div class="mi-card"><div class="mi-card-title">${title}</div><div class="kpi-val">${value}</div><div class="kpi-lbl">${sub}</div>${dh}</div>`;
+function kpiCard(title,value,sub,key,fmt,s1,s2,s3,filtered,ns1){
+  const dspan=(cur,base)=>{
+    if(cur==null||base==null||!base) return '';
+    const d=(cur-base)/base*100; const cls=d>0?'pos':d<0?'neg':'neu';
+    return `<span class="kpi-d ${cls}">${d>0?'▲':d<0?'▼':'–'}${Math.abs(d).toFixed(1)}%</span>`;
+  };
+  let body='';
+  if(filtered){
+    if(s1&&ns1&&ns1[key]){const d=(s1[key]-ns1[key])/ns1[key]*100;const cls=d>0?'pos':d<0?'neg':'neu';
+      body=`<div class="kpi-d ${cls}">${d>0?'▲':d<0?'▼':'–'}${Math.abs(d).toFixed(1)}% vs national</div>`;}
+  } else {
+    body=`
+      <div class="kpi-cmp"><span>Prior 60 days</span><span><b>${s2?fmt(s2[key]):'—'}</b>${dspan(s1?.[key], s2?.[key])}</span></div>
+      <div class="kpi-cmp"><span>Same period last year</span><span><b>${s3?fmt(s3[key]):'—'}</b>${dspan(s1?.[key], s3?.[key])}</span></div>`;
+  }
+  return `<div class="mi-card"><div class="mi-card-title">${title}</div><div class="kpi-val">${value}</div><div class="kpi-lbl">${sub}</div>${body}</div>`;
 }
 
 // ── Generic impact slider ─────────────────────────────────────────────────────
@@ -698,9 +713,9 @@ function renderPage(V, opts={}) {
 
     <!-- KPIs -->
     <div class="mi-g3">
-      ${kpiCard('Total Sales (60d)', fmtN(s1?.count??0), curLbl, s1, cmpS, 'count', cmpL)}
-      ${kpiCard('Avg Sale Price', fmtD(s1?.avg??0), curLbl, s1, cmpS, 'avg', cmpL)}
-      ${kpiCard('Median Sale Price', fmtD(s1?.median??0), curLbl, s1, cmpS, 'median', cmpL)}
+      ${kpiCard('Total Sales (60d)', fmtN(s1?.count??0), curLbl, 'count', fmtN, s1, s2, s3, filtered, ns1)}
+      ${kpiCard('Avg Sale Price', fmtD(s1?.avg??0), curLbl, 'avg', fmtD, s1, s2, s3, filtered, ns1)}
+      ${kpiCard('Median Sale Price', fmtD(s1?.median??0), curLbl, 'median', fmtD, s1, s2, s3, filtered, ns1)}
     </div>
 
     <!-- Period chart + table -->
