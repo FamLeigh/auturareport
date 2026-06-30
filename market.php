@@ -261,6 +261,9 @@ include __DIR__ . '/includes/header.php';
       <button type="button" class="mi-ms-reset" id="mi-filter-reset" hidden>Clear all</button>
       <span class="mi-region-hint" id="mi-region-hint"></span>
     </div>
+    <p class="mi-period" style="margin-top:14px;max-width:820px;line-height:1.6;">
+      Valuation estimates drawn from <?= $amr_record_count > 0 ? number_format($amr_record_count) : 'tens of thousands of' ?> sold auction records<?= $amr_data_date ? ' dated ' . h($amr_data_date) : '' ?> over the last 18 months, reflecting as-is impound vehicle data from Autura marketplace sales. Beta, for internal evaluation. Created by Kevin B. Leigh. &copy; 2026 Autura NewCo, LLC.
+    </p>
   </section>
   <div id="mi-body">
     <div class="mi-load">
