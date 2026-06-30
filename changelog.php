@@ -2,6 +2,7 @@
 require_once __DIR__ . '/includes/auth.php';
 
 $ENTRIES = [
+    ['v1.17 Beta', 'June 16, 2026', 'Market Report: the Seller filter now lists only sellers from the selected Region(s) — pick a region and the Seller dropdown narrows to that region\'s sellers (and resets to all when the region is cleared).'],
     ['v1.16 Beta', 'June 12, 2026', 'Per-user passwords. The shared access password is now a one-time bootstrap: on first sign-in you set your own password (stored hashed, server-side) and use it from then on — the default no longer works for you afterward. Existing users are prompted to set a password on their next login.'],
     ['v1.15 Beta', 'June 12, 2026', 'Moved 90-Day Activity into the Customer Results report as a tab (alongside First Action, Sold by Month, and Potential Churn). Removed the separate nav item; the old /activity-90 link redirects to Customer Results.'],
     ['v1.14 Beta', 'June 10, 2026', 'New 90-Day Activity report at /activity-90 (behind login + the 4-digit code). Lists customers who first ran on/after Jul 1, 2025 and how many cars they sold in their first three months — per-month ramp (Month 1/2/3) plus a first-90-day total, with cohort totals and an "in progress" flag for customers whose window has not fully elapsed. Searchable by customer.'],

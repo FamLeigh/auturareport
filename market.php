@@ -1115,6 +1115,7 @@ function makeMultiSelect({mountId, label, items, onChange}) {
   const root = document.getElementById(mountId);
   if (!root) return { get:()=>new Set(), clear:()=>{} };
   const selected = new Set();
+  let curItems = items;
   root.classList.add('mi-ms');
   root.innerHTML = `
     <button type="button" class="mi-ms-btn"><span class="mi-ms-lbl">${esc(label)}:</span> <span class="mi-ms-sum">All</span> <span class="mi-ms-caret">▾</span></button>
@@ -1126,11 +1127,11 @@ function makeMultiSelect({mountId, label, items, onChange}) {
   const btn=root.querySelector('.mi-ms-btn'), pop=root.querySelector('.mi-ms-pop'),
         sum=root.querySelector('.mi-ms-sum'), search=root.querySelector('.mi-ms-search'),
         list=root.querySelector('.mi-ms-list'), clearBtn=root.querySelector('.mi-ms-clear');
-  const labelOf = v => { const f=items.find(it=>it.value===v); return f?f.label:v; };
+  const labelOf = v => { const f=curItems.find(it=>it.value===v); return f?f.label:v; };
 
   const renderList = (q='') => {
     const ft=q.trim().toLowerCase();
-    const rows=items.map((it,i)=>({it,i})).filter(({it})=>!ft||it.label.toLowerCase().includes(ft)).slice(0,400);
+    const rows=curItems.map((it,i)=>({it,i})).filter(({it})=>!ft||it.label.toLowerCase().includes(ft)).slice(0,400);
     list.innerHTML = rows.length ? rows.map(({it,i})=>
       `<label class="mi-ms-opt"><input type="checkbox" data-i="${i}" ${selected.has(it.value)?'checked':''}><span class="mi-ms-opt-l">${esc(it.label)}</span><span class="mi-ms-opt-c">${fmtN(it.count)}</span></label>`
     ).join('') : `<div class="mi-ms-empty">No matches</div>`;
@@ -1151,13 +1152,22 @@ function makeMultiSelect({mountId, label, items, onChange}) {
   search.addEventListener('input', ()=>renderList(search.value));
   list.addEventListener('change', e=>{
     const cb=e.target.closest('input[type=checkbox]'); if(!cb) return;
-    const it=items[+cb.dataset.i];
+    const it=curItems[+cb.dataset.i];
     if(cb.checked) selected.add(it.value); else selected.delete(it.value);
     updateSum(); onChange();
   });
   clearBtn.addEventListener('click', ()=>{ selected.clear(); renderList(search.value); updateSum(); onChange(); });
 
-  return { get:()=>selected, clear:()=>{ selected.clear(); updateSum(); } };
+  // Replace the option list (e.g. sellers limited to the chosen region). Drops any
+  // current selections that are no longer available.
+  const update = (newItems) => {
+    curItems = newItems;
+    const valid = new Set(curItems.map(it=>it.value));
+    [...selected].forEach(v=>{ if(!valid.has(v)) selected.delete(v); });
+    renderList(search.value); updateSum();
+  };
+
+  return { get:()=>selected, clear:()=>{ selected.clear(); updateSum(); }, update };
 }
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
@@ -1190,12 +1200,18 @@ function applyFilters() {
     const tally=(key)=>{const m={};V.forEach(v=>{if(v[key])m[v[key]]=(m[v[key]]||0)+1;});return m;};
     const rc=tally('region'), sc=tally('seller');
     const rItems=Object.keys(rc).sort((a,b)=>rc[b]-rc[a]).map(c=>({value:c,label:regionOpt(c),count:rc[c]}));
-    const sItems=Object.keys(sc).sort((a,b)=>sc[b]-sc[a]).map(s=>({value:s,label:s,count:sc[s]}));
-    msRegion=makeMultiSelect({mountId:'ms-region', label:'Region', items:rItems, onChange:applyFilters});
-    msSeller=makeMultiSelect({mountId:'ms-seller', label:'Seller', items:sItems, onChange:applyFilters});
+    // Seller list limited to the currently-selected region(s) (all sellers when no region picked).
+    const sellerItems=()=>{
+      const rs=msRegion.get(), m={};
+      ALL_V.forEach(v=>{ if(v.seller && (rs.size===0||rs.has(v.region))) m[v.seller]=(m[v.seller]||0)+1; });
+      return Object.keys(m).sort((a,b)=>m[b]-m[a]).map(s=>({value:s,label:s,count:m[s]}));
+    };
+    const onRegionChange=()=>{ msSeller.update(sellerItems()); applyFilters(); };
+    msRegion=makeMultiSelect({mountId:'ms-region', label:'Region', items:rItems, onChange:onRegionChange});
+    msSeller=makeMultiSelect({mountId:'ms-seller', label:'Seller', items:Object.keys(sc).sort((a,b)=>sc[b]-sc[a]).map(s=>({value:s,label:s,count:sc[s]})), onChange:applyFilters});
 
     const reset=$('mi-filter-reset');
-    if(reset) reset.addEventListener('click', ()=>{ msRegion.clear(); msSeller.clear(); applyFilters(); });
+    if(reset) reset.addEventListener('click', ()=>{ msRegion.clear(); msSeller.clear(); msSeller.update(sellerItems()); applyFilters(); });
     // Close any open popover when clicking elsewhere.
     document.addEventListener('click', ()=>document.querySelectorAll('.mi-ms-pop').forEach(p=>p.hidden=true));
 
