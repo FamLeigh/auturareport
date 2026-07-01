@@ -2,6 +2,7 @@
 require_once __DIR__ . '/includes/auth.php';
 
 $ENTRIES = [
+    ['v1.28 Beta', 'June 30, 2026', 'Seller-Results: added Seller and Group filters (using the same saved seller groups as the other reports). They apply across all tabs — First Action, Sold by Month, 90-Day Activity, and Potential Churn — alongside the existing start-quarter and search filters.'],
     ['v1.27 Beta', 'June 30, 2026', 'Market Report: when a Region / Seller / Group filter is active, the Buyer Premium — Revenue Impact calculators now use the national per-car premium (the market value of mileage / keys / starting) applied to the selected group\'s volume, instead of that selection\'s own often-noisy or zero premium. A note marks when the national average is in use; the current-state reporting rate still reflects the selection.'],
     ['v1.26 Beta', 'June 30, 2026', 'Market Report: in the Buyer Premium — Revenue Impact section, the "your premium" dollar figures (your take) are now hidden by default. A "+ My premium" toggle on each calculator reveals them when needed; the rest of the section (mileage/key/start rates and added sale value) stays visible.'],
     ['v1.25 Beta', 'June 30, 2026', 'Buyer Market Report gains Region / Seller / Group filters (same as the Market Report). Pick a seller to see exactly who buys their inventory — every view (geography, segments, top buyers, supply→demand) re-slices to the selection.'],

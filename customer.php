@@ -10,11 +10,39 @@ $amr_meta      = file_exists(__DIR__ . '/data/amr-meta.json') ? json_decode(file
 $amr_data_date = $amr_meta['data_date'] ?? '';
 $cr_payload    = $cr_ok ? amr_customer_payload() : '{"months":[],"customers":[],"dataDate":""}';
 
+// Seller groups (drive the Group filter — same file the market/buyer reports use).
+$cr_groups_file = __DIR__ . '/data/seller-groups.json';
+$cr_groups = file_exists($cr_groups_file) ? (json_decode(file_get_contents($cr_groups_file), true) ?: []) : [];
+
 $page_title = 'Seller-Results';
 $meta_desc  = 'Seller-Results — first auction, sold by month, and potential churn.';
 $body_class = 'page-customer';
 $canonical  = '/customer-results';
-$extra_head = '<meta name="robots" content="noindex, nofollow">';
+$extra_head = '<meta name="robots" content="noindex, nofollow">
+<style>
+.mi-ms { position: relative; display: inline-block; }
+.mi-ms-btn { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 13px; font-weight: 600; padding: 7px 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: border-color .15s; }
+.mi-ms-btn:hover { border-color: var(--accent); }
+.mi-ms-lbl { color: var(--text-muted); font-weight: 700; }
+.mi-ms.mi-ms-on .mi-ms-btn { border-color: var(--accent); color: var(--accent); }
+.mi-ms.mi-ms-on .mi-ms-lbl { color: var(--accent); }
+.mi-ms-caret { font-size: 10px; color: var(--text-muted); }
+.mi-ms-pop { position: absolute; top: calc(100% + 5px); left: 0; z-index: 30; width: 290px; max-width: 84vw; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 8px 28px rgba(0,0,0,.14); padding: 10px; }
+.mi-ms-search { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 7px; color: var(--text); font-size: 13px; padding: 8px 10px; }
+.mi-ms-search:focus { outline: none; border-color: var(--accent); }
+.mi-ms-tools { display: flex; justify-content: flex-end; margin: 6px 0 2px; }
+.mi-ms-clear { background: none; border: none; color: var(--text-muted); font-size: 12px; cursor: pointer; padding: 2px 4px; }
+.mi-ms-clear:hover { color: var(--accent); }
+.mi-ms-list { max-height: 260px; overflow-y: auto; }
+.mi-ms-opt { display: flex; align-items: center; gap: 9px; padding: 6px; font-size: 13px; cursor: pointer; border-radius: 6px; }
+.mi-ms-opt:hover { background: var(--surface-2); }
+.mi-ms-opt input { accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
+.mi-ms-opt-l { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mi-ms-opt-c { color: var(--text-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.mi-ms-empty { padding: 14px; text-align: center; color: var(--text-muted); font-size: 13px; }
+.mi-ms-reset { background: none; border: none; color: var(--text-muted); font-size: 12px; font-weight: 600; cursor: pointer; text-decoration: underline; }
+.mi-ms-reset:hover { color: var(--accent); }
+</style>';
 
 include __DIR__ . '/includes/header.php';
 ?>
@@ -53,7 +81,10 @@ include __DIR__ . '/includes/header.php';
 
   <div class="cr-toolbar">
     <span class="cr-count" id="cr-count"></span>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+      <div class="mi-ms" id="cr-ms-seller"></div>
+      <div class="mi-ms" id="cr-ms-group"></div>
+      <button class="mi-ms-reset" id="cr-filter-reset" hidden>Clear</button>
       <select class="cr-search" id="cr-quarter" style="min-width:180px;cursor:pointer;"></select>
       <input class="cr-search" id="cr-search" type="text" placeholder="Search customer…">
     </div>
@@ -70,6 +101,7 @@ include __DIR__ . '/includes/header.php';
 <?php if ($cr_ok): ?>
 <script>
 const CR = <?= $cr_payload ?>;
+const GROUPS = <?= json_encode($cr_groups, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE) ?: '{}' ?>;
 const MONNAMES = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const mlbl = ym => ym ? MONNAMES[+ym.split('-')[1]] + ' ' + ym.split('-')[0] : '—';
 const fmtN = n => Number(n||0).toLocaleString();
@@ -101,8 +133,17 @@ function daysInactive(lastYM){
 let activeTab = 'first';
 let term = '';
 let quarter = '';
+let msSeller = null, msGroup = null;
+let groupSellers = null;   // union of member sellers for the selected group(s)
 
-const matches = c => (!term || c.name.toLowerCase().includes(term)) && (!quarter || qKey(c.first) === quarter);
+const matches = c => {
+  if (term && !c.name.toLowerCase().includes(term)) return false;
+  if (quarter && qKey(c.first) !== quarter) return false;
+  const ss = msSeller ? msSeller.get() : null;
+  if (ss && ss.size && !ss.has(c.name)) return false;
+  if (groupSellers && !groupSellers.has(c.name)) return false;
+  return true;
+};
 
 // ── First Action ────────────────────────────────────────────────────────────
 function renderFirst() {
@@ -247,6 +288,90 @@ const quarters = [...new Set(CR.customers.map(c => qKey(c.first)))].sort();
 qSel.innerHTML = '<option value="">All start quarters</option>' +
   quarters.map(q => `<option value="${q}">First ran ${qLabel(q)}</option>`).join('');
 qSel.addEventListener('change', e => { quarter = e.target.value; render(); });
+
+// ── Seller / Group filters (shared widget pattern with the market report) ─────
+function makeMultiSelect({mountId, label, items, onChange}) {
+  const root = document.getElementById(mountId);
+  if (!root) return { get:()=>new Set(), clear:()=>{} };
+  const selected = new Set();
+  let curItems = items;
+  root.classList.add('mi-ms');
+  root.innerHTML = `
+    <button type="button" class="mi-ms-btn"><span class="mi-ms-lbl">${esc(label)}:</span> <span class="mi-ms-sum">All</span> <span class="mi-ms-caret">▾</span></button>
+    <div class="mi-ms-pop" hidden>
+      <input type="text" class="mi-ms-search" placeholder="Search ${esc(label.toLowerCase())}…">
+      <div class="mi-ms-tools"><button type="button" class="mi-ms-clear">Clear</button></div>
+      <div class="mi-ms-list"></div>
+    </div>`;
+  const btn=root.querySelector('.mi-ms-btn'), pop=root.querySelector('.mi-ms-pop'),
+        sum=root.querySelector('.mi-ms-sum'), search=root.querySelector('.mi-ms-search'),
+        list=root.querySelector('.mi-ms-list'), clearBtn=root.querySelector('.mi-ms-clear');
+  const labelOf = v => { const f=curItems.find(it=>it.value===v); return f?f.label:v; };
+  const renderList = (q='') => {
+    const ft=q.trim().toLowerCase();
+    const rows=curItems.map((it,i)=>({it,i})).filter(({it})=>!ft||it.label.toLowerCase().includes(ft)).slice(0,400);
+    list.innerHTML = rows.length ? rows.map(({it,i})=>
+      `<label class="mi-ms-opt"><input type="checkbox" data-i="${i}" ${selected.has(it.value)?'checked':''}><span class="mi-ms-opt-l">${esc(it.label)}</span><span class="mi-ms-opt-c">${fmtN(it.count)}</span></label>`
+    ).join('') : `<div class="mi-ms-empty">No matches</div>`;
+  };
+  const updateSum = () => {
+    sum.textContent = selected.size===0 ? 'All' : selected.size===1 ? labelOf([...selected][0]) : `${selected.size} selected`;
+    root.classList.toggle('mi-ms-on', selected.size>0);
+  };
+  btn.addEventListener('click', e=>{
+    e.stopPropagation();
+    const willOpen = pop.hidden;
+    document.querySelectorAll('.mi-ms-pop').forEach(p=>p.hidden=true);
+    pop.hidden = !willOpen;
+    if (willOpen) { search.value=''; renderList(); search.focus(); }
+  });
+  pop.addEventListener('click', e=>e.stopPropagation());
+  search.addEventListener('input', ()=>renderList(search.value));
+  list.addEventListener('change', e=>{
+    const cb=e.target.closest('input[type=checkbox]'); if(!cb) return;
+    const it=curItems[+cb.dataset.i];
+    if(cb.checked) selected.add(it.value); else selected.delete(it.value);
+    updateSum(); onChange();
+  });
+  clearBtn.addEventListener('click', ()=>{ selected.clear(); renderList(search.value); updateSum(); onChange(); });
+  return { get:()=>selected, clear:()=>{ selected.clear(); updateSum(); } };
+}
+
+function recomputeGroupSellers() {
+  const gs = msGroup ? msGroup.get() : new Set();
+  if (!gs.size) { groupSellers = null; return; }
+  groupSellers = new Set();
+  gs.forEach(g => (GROUPS[g] || []).forEach(s => groupSellers.add(s)));
+}
+function onFilterChange() {
+  recomputeGroupSellers();
+  const active = (msSeller && msSeller.get().size) || (msGroup && msGroup.get().size);
+  const rb = document.getElementById('cr-filter-reset'); if (rb) rb.hidden = !active;
+  render();
+}
+
+const sellerItems = CR.customers
+  .slice().sort((a,b)=>b.total-a.total)
+  .map(c => ({ value:c.name, label:c.name, count:c.total }));
+msSeller = makeMultiSelect({mountId:'cr-ms-seller', label:'Seller', items:sellerItems, onChange:onFilterChange});
+
+const groupNames = Object.keys(GROUPS);
+if (groupNames.length) {
+  const totalByName = Object.fromEntries(CR.customers.map(c=>[c.name, c.total]));
+  const groupItems = groupNames.sort().map(g => ({
+    value:g, label:g,
+    count:(GROUPS[g]||[]).reduce((a,s)=>a+(totalByName[s]||0),0)
+  }));
+  msGroup = makeMultiSelect({mountId:'cr-ms-group', label:'Group', items:groupItems, onChange:onFilterChange});
+} else {
+  document.getElementById('cr-ms-group').remove();
+}
+document.getElementById('cr-filter-reset').addEventListener('click', () => {
+  if (msSeller) msSeller.clear();
+  if (msGroup) msGroup.clear();
+  onFilterChange();
+});
+document.addEventListener('click', () => document.querySelectorAll('.mi-ms-pop').forEach(p=>p.hidden=true));
 
 render();
 </script>
